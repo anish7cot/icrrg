@@ -1,0 +1,42 @@
+<div class="login-container">
+  <mat-card class="login-card">
+    <mat-card-header>
+      <mat-icon mat-card-avatar class="logo-icon">security</mat-icon>
+      <mat-card-title>ICRRG</mat-card-title>
+      <mat-card-subtitle>{{ isRegister ? 'Create Account' : 'Sign In' }}</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="error-msg" *ngIf="error">
+        <mat-icon>error_outline</mat-icon>
+        {{ error }}
+      </div>
+
+      <form (ngSubmit)="submit()" class="login-form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Username</mat-label>
+          <input matInput [(ngModel)]="username" name="username" required autocomplete="username" />
+          <mat-icon matPrefix>person</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Password</mat-label>
+          <input matInput [(ngModel)]="password" name="password" type="password" required autocomplete="current-password" />
+          <mat-icon matPrefix>lock</mat-icon>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" type="submit" class="full-width submit-btn"
+                [disabled]="loading || !username.trim() || !password.trim()">
+          <mat-spinner diameter="20" *ngIf="loading"></mat-spinner>
+          <span *ngIf="!loading">{{ isRegister ? 'Register' : 'Sign In' }}</span>
+        </button>
+      </form>
+    </mat-card-content>
+
+    <mat-card-actions align="end">
+      <button mat-button color="accent" (click)="toggleMode()">
+        {{ isRegister ? 'Already have an account? Sign In' : 'New user? Register' }}
+      </button>
+    </mat-card-actions>
+  </mat-card>
+</div>

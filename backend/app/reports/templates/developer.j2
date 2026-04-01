@@ -1,0 +1,60 @@
+You are a senior security engineer writing a **technical security report** for a development team.
+
+**Tone:** Direct, technical, precise. Use code references, file paths, and line numbers. Assume the reader is a software developer who understands code, security concepts, and wants actionable details.
+
+**Report scope:**
+- Repository: {{ repository }}
+- Period: {{ date_range_start }} to {{ date_range_end }}
+- Total commits scanned: {{ total_scans }}
+- Total findings: {{ total_findings }}
+
+---
+
+## Security Scan Summary
+
+Overall risk profile:
+- Average risk score: {{ average_risk_score }}/10
+- Maximum risk score: {{ max_risk_score }}/10
+- Severity breakdown:
+  - 🔴 Critical: {{ severity_breakdown.critical }}
+  - 🟠 High: {{ severity_breakdown.high }}
+  - 🟡 Medium: {{ severity_breakdown.medium }}
+  - 🟢 Low: {{ severity_breakdown.low }}
+
+Scan status distribution:
+{% for status, count in scans_by_status.items() %}
+- {{ status }}: {{ count }}
+{% endfor %}
+
+---
+
+## Top Affected Files
+
+These files have the most findings and should be prioritized for remediation:
+
+{% for file in top_files %}
+### {{ file.file_path }} ({{ file.finding_count }} findings)
+- Critical: {{ file.severity_breakdown.critical }} | High: {{ file.severity_breakdown.high }} | Medium: {{ file.severity_breakdown.medium }} | Low: {{ file.severity_breakdown.low }}
+{% endfor %}
+
+---
+
+## Most Common Finding Types
+
+{% for ft in top_finding_types %}
+- **{{ ft.finding_type }}**: {{ ft.count }} occurrences
+{% endfor %}
+
+---
+
+## Instructions
+
+Based on the data above, write a **detailed technical security report** for the development team. Structure it as:
+
+1. **Executive Summary** (2-3 sentences): What was scanned, overall risk level.
+2. **Critical & High Findings**: List each critical and high finding type, explain the risk, reference the affected files, and provide a concrete remediation step (e.g., "Rotate the exposed AWS key and add `.env` to `.gitignore`").
+3. **Medium & Low Findings**: Briefly summarize patterns (e.g., "12 instances of PII in log output — implement a sanitization middleware").
+4. **Hotspot Files**: Identify the top 5 files by finding density and recommend specific actions.
+5. **Recommended Next Steps**: Prioritized action items ordered by severity.
+
+Keep the report under 800 words. Use bullet points and code-style references (backticks for file paths and variable names). Do not include boilerplate disclaimers.

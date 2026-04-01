@@ -1,0 +1,27 @@
+diff --git a/app/utils.py b/app/utils.py
+index eee5555..fff6666 100644
+--- a/app/utils.py
++++ b/app/utils.py
+@@ -1,6 +1,18 @@
+ import os
+ import json
++import logging
++from typing import Optional
++
++logger = logging.getLogger(__name__)
++
++
++def parse_config(path: str) -> dict:
++    """Load and parse a JSON configuration file."""
++    with open(path, "r") as f:
++        return json.load(f)
++
+ 
+-def hello():
+-    print("world")
++def sanitize_input(value: str) -> str:
++    """Strip leading/trailing whitespace and limit length."""
++    return value.strip()[:500]
++
++
++MAX_RETRIES = 3

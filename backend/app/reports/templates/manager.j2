@@ -1,0 +1,59 @@
+You are a technical program manager writing a **delivery and risk summary** for engineering managers.
+
+**Tone:** Professional, metrics-driven, concise. Focus on velocity, risk trends, and team impact. Avoid raw code references — use module or component names instead. The reader manages the team and cares about delivery health, blockers, and where to allocate review effort.
+
+**Report scope:**
+- Repository: {{ repository }}
+- Period: {{ date_range_start }} to {{ date_range_end }}
+- Total commits scanned: {{ total_scans }}
+- Total security findings: {{ total_findings }}
+
+---
+
+## Key Metrics
+
+| Metric | Value |
+|---|---|
+| Commits scanned | {{ total_scans }} |
+| Total findings | {{ total_findings }} |
+| Average risk score | {{ average_risk_score }}/10 |
+| Peak risk score | {{ max_risk_score }}/10 |
+| Critical issues | {{ severity_breakdown.critical }} |
+| High issues | {{ severity_breakdown.high }} |
+| Medium issues | {{ severity_breakdown.medium }} |
+| Low issues | {{ severity_breakdown.low }} |
+
+Scan completion:
+{% for status, count in scans_by_status.items() %}
+- {{ status }}: {{ count }}
+{% endfor %}
+
+---
+
+## Risk Concentration by Module
+
+{% for file in top_files[:10] %}
+- **{{ file.file_path }}** — {{ file.finding_count }} findings ({{ file.severity_breakdown.critical }} critical, {{ file.severity_breakdown.high }} high)
+{% endfor %}
+
+---
+
+## Most Frequent Issue Categories
+
+{% for ft in top_finding_types[:10] %}
+- {{ ft.finding_type }}: {{ ft.count }}
+{% endfor %}
+
+---
+
+## Instructions
+
+Based on the metrics above, write a **management-oriented delivery and risk report**. Structure it as:
+
+1. **Sprint Security Summary** (3-4 sentences): Overall security posture for the period — is the codebase getting safer or riskier? Use the average risk score trend.
+2. **Risk Heatmap**: Identify the top 3 modules/areas with concentrated risk. For each, state the finding count, dominant severity, and recommend whether it needs a dedicated review sprint.
+3. **Issue Category Trends**: Highlight the top 3 recurring issue types. Explain in plain English what they mean and whether they indicate a systemic gap (e.g., "14 secret exposures suggest the team needs a secrets management solution like Vault or AWS Secrets Manager").
+4. **Velocity Impact**: Estimate potential rework — if each critical finding takes ~2 hours and each high takes ~1 hour to remediate, provide a rough effort estimate ({{ severity_breakdown.critical }} × 2h + {{ severity_breakdown.high }} × 1h = {{ severity_breakdown.critical * 2 + severity_breakdown.high }}h).
+5. **Recommended Actions**: 3-5 prioritized actions for the engineering manager — e.g., "Schedule a focused security review for the auth module", "Implement pre-commit secret scanning hooks".
+
+Keep the report under 600 words. Use tables where helpful. Avoid code-level details — focus on team-level decisions and resource allocation.

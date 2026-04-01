@@ -1,0 +1,117 @@
+<!-- Status Indicator -->
+<div class="status-bar" *ngIf="scan" [class]="'status-' + scan.status">
+  <div class="status-left">
+    <mat-icon class="status-icon">{{ scan.status === 'completed' ? 'check_circle' : 'hourglass_top' }}</mat-icon>
+    <div class="status-text">
+      <span class="status-main" *ngIf="scan.status === 'completed'">All reviews complete</span>
+      <span class="status-main" *ngIf="scan.status === 'reviewing'">Detection complete — Code review in progress...</span>
+      <span class="status-main" *ngIf="scan.status !== 'completed' && scan.status !== 'reviewing'">{{ scan.status }}</span>
+      <span class="status-detail">
+        {{ detectionFindings.length }} detection ·
+        {{ reviewFindings.length }} code review finding{{ reviewFindings.length !== 1 ? 's' : '' }}
+      </span>
+    </div>
+  </div>
+  <mat-progress-bar *ngIf="scan.status === 'reviewing'" mode="indeterminate" class="review-progress"></mat-progress-bar>
+</div>
+
+<!-- Summary Bar -->
+<div class="summary-bar" *ngIf="scan">
+  <div class="summary-left">
+    <div class="risk-badge" [class]="'risk-' + riskLevel">
+      <span class="risk-value">{{ scan.risk_score | number:'1.1-1' }}</span>
+      <span class="risk-label">/ 10</span>
+    </div>
+    <div class="summary-info">
+      <span class="summary-total">{{ scan.findings.length }} finding{{ scan.findings.length !== 1 ? 's' : '' }}</span>
+      <span class="summary-repo" *ngIf="scan.repository">{{ scan.repository }}</span>
+    </div>
+  </div>
+
+  <div class="severity-counts">
+    <div
+      *ngFor="let s of severityCounts"
+      class="severity-count-item"
+      [class]="'sc-' + s.label"
+      [class.sc-zero]="s.count === 0"
+    >
+      <mat-icon class="sc-icon">{{ s.icon }}</mat-icon>
+      <span class="sc-number">{{ s.count }}</span>
+      <span class="sc-label">{{ s.label | uppercase }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- Empty State -->
+<div *ngIf="scan && scan.findings.length === 0 && scan.status === 'completed'" class="no-findings">
+  <mat-icon class="success-icon">check_circle</mat-icon>
+  <h3>No Issues Found</h3>
+  <p>The diff looks clean — no secrets, credentials, or PHI detected.</p>
+</div>
+
+<!-- Findings Grouped by File -->
+<mat-accordion *ngIf="fileGroups.length > 0" multi class="file-accordion">
+  <mat-expansion-panel *ngFor="let group of fileGroups" [expanded]="true">
+    <mat-expansion-panel-header>
+      <mat-panel-title class="file-panel-title">
+        <mat-icon class="file-icon">description</mat-icon>
+        <code class="file-path">{{ group.filePath }}</code>
+      </mat-panel-title>
+      <mat-panel-description class="file-panel-desc">
+        <span class="file-count">{{ group.findings.length }}</span>
+        <span *ngIf="group.detectionCount" class="file-badge detection-badge">
+          <mat-icon class="badge-icon">shield</mat-icon>{{ group.detectionCount }}
+        </span>
+        <span *ngIf="group.reviewCount" class="file-badge review-badge">
+          <mat-icon class="badge-icon">smart_toy</mat-icon>{{ group.reviewCount }}
+        </span>
+      </mat-panel-description>
+    </mat-expansion-panel-header>
+
+    <div class="finding-cards">
+      <mat-card
+        *ngFor="let finding of group.findings; let i = index"
+        class="finding-card"
+        [class]="'finding-' + finding.severity"
+      >
+        <mat-card-content>
+          <div class="finding-header">
+            <mat-icon class="engine-icon" [class]="isReviewFinding(finding) ? 'engine-review' : 'engine-detection'">
+              {{ isReviewFinding(finding) ? 'smart_toy' : 'shield' }}
+            </mat-icon>
+            <mat-chip [class]="'severity-' + finding.severity">
+              {{ finding.severity | uppercase }}
+            </mat-chip>
+            <span class="finding-type">{{ formatType(finding.finding_type) }}</span>
+            <span class="finding-confidence" *ngIf="finding.confidence">
+              {{ (finding.confidence * 100) | number:'1.0-0' }}%
+            </span>
+          </div>
+
+          <p class="finding-summary" (click)="toggleExpand(finding)">
+            {{ getSummary(finding) }}
+            <mat-icon class="expand-icon" *ngIf="getExplanation(finding)">
+              {{ expandedIds.has(finding.id) ? 'expand_less' : 'expand_more' }}
+            </mat-icon>
+          </p>
+
+          <div *ngIf="expandedIds.has(finding.id) && getExplanation(finding)" class="finding-expanded">
+            <div class="explanation-block">
+              <span class="block-label">Explanation</span>
+              <p>{{ getExplanation(finding) }}</p>
+            </div>
+            <div *ngIf="getSuggestion(finding)" class="suggestion-block">
+              <span class="block-label">Suggestion</span>
+              <p>{{ getSuggestion(finding) }}</p>
+            </div>
+          </div>
+
+          <div class="finding-location" *ngIf="finding.line_number">
+            <mat-icon class="loc-icon">place</mat-icon>
+            <span class="loc-line">Line {{ finding.line_number }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </mat-expansion-panel>
+</mat-accordion>

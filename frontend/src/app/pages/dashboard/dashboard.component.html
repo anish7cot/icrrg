@@ -1,0 +1,516 @@
+<div class="dashboard-container">
+  <!-- Loading state -->
+  <div class="center-message" *ngIf="loading && statsLoading">
+    <mat-spinner diameter="48"></mat-spinner>
+    <p>Loading dashboard...</p>
+  </div>
+
+  <!-- Error banner -->
+  <div class="error-banner" *ngIf="error && !loading">
+    <mat-icon>error_outline</mat-icon>
+    <span>{{ error }}</span>
+  </div>
+
+  <!-- ── Project Selector ────────────────────────────────────────────── -->
+  <div class="project-selector">
+    <mat-form-field appearance="outline" class="repo-select">
+      <mat-label>Project</mat-label>
+      <mat-select [(ngModel)]="selectedRepo" (selectionChange)="onRepoChange()">
+        <mat-option value="">All Projects</mat-option>
+        <mat-option *ngFor="let repo of repositories" [value]="repo">{{ repo }}</mat-option>
+      </mat-select>
+      <mat-icon matPrefix>folder</mat-icon>
+    </mat-form-field>
+  </div>
+
+  <!-- ── Hero Metric Cards ──────────────────────────────────────────── -->
+  <div class="metrics-grid" *ngIf="stats">
+    <mat-card class="metric-card hero-card">
+      <mat-card-content>
+        <mat-icon class="metric-icon icon-scans">radar</mat-icon>
+        <div class="metric-value">{{ stats.total_scans }}</div>
+        <div class="metric-label">Total Scans</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="metric-card hero-card">
+      <mat-card-content>
+        <mat-icon class="metric-icon icon-findings">bug_report</mat-icon>
+        <div class="metric-value">{{ stats.total_findings }}</div>
+        <div class="metric-label">Issues Found</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="metric-card hero-card">
+      <mat-card-content>
+        <mat-icon class="metric-icon icon-clean">verified</mat-icon>
+        <div class="metric-value">{{ stats.clean_scans }}</div>
+        <div class="metric-label">Clean Scans</div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="metric-card hero-card">
+      <mat-card-content>
+        <mat-icon class="metric-icon icon-risk">speed</mat-icon>
+        <div class="metric-value">{{ stats.average_risk_score | number:'1.1-1' }}</div>
+        <div class="metric-label">Avg Risk Score</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- ── Severity Breakdown + Top Issue Types ───────────────────────── -->
+  <div class="detail-row" *ngIf="stats">
+    <!-- Severity breakdown -->
+    <mat-card class="detail-card">
+      <mat-card-header>
+        <mat-card-title>Issues by Severity</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="severity-bars">
+          <div class="severity-row">
+            <span class="sev-label sev-critical">Critical</span>
+            <div class="bar-track">
+              <div class="bar-fill bar-critical" [style.width.%]="severityPercent(stats.severity.critical)"></div>
+            </div>
+            <span class="sev-count">{{ stats.severity.critical }}</span>
+          </div>
+          <div class="severity-row">
+            <span class="sev-label sev-high">High</span>
+            <div class="bar-track">
+              <div class="bar-fill bar-high" [style.width.%]="severityPercent(stats.severity.high)"></div>
+            </div>
+            <span class="sev-count">{{ stats.severity.high }}</span>
+          </div>
+          <div class="severity-row">
+            <span class="sev-label sev-medium">Medium</span>
+            <div class="bar-track">
+              <div class="bar-fill bar-medium" [style.width.%]="severityPercent(stats.severity.medium)"></div>
+            </div>
+            <span class="sev-count">{{ stats.severity.medium }}</span>
+          </div>
+          <div class="severity-row">
+            <span class="sev-label sev-low">Low</span>
+            <div class="bar-track">
+              <div class="bar-fill bar-low" [style.width.%]="severityPercent(stats.severity.low)"></div>
+            </div>
+            <span class="sev-count">{{ stats.severity.low }}</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Top issue types -->
+    <mat-card class="detail-card">
+      <mat-card-header>
+        <mat-card-title>Top Issue Types</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="issue-list" *ngIf="stats.top_issue_types.length > 0">
+          <div class="issue-row" *ngFor="let item of stats.top_issue_types">
+            <span class="issue-name">{{ friendlyType(item.finding_type) }}</span>
+            <span class="issue-count-badge">{{ item.count }}</span>
+          </div>
+        </div>
+        <div class="empty-state" *ngIf="stats.top_issue_types.length === 0">
+          <mat-icon>check_circle</mat-icon>
+          <p>No issues detected yet</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- ── Charts Row ─────────────────────────────────────────────────── -->
+  <div class="charts-row" *ngIf="stats">
+    <!-- Line chart: Issues Over Time -->
+    <mat-card class="chart-card">
+      <mat-card-header>
+        <mat-card-title>Issues Over Time</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="chart-wrapper" *ngIf="trendsReady">
+          <canvas baseChart
+            type="line"
+            [data]="lineChartData"
+            [options]="lineChartOptions">
+          </canvas>
+        </div>
+        <div class="center-message" *ngIf="!trendsReady">
+          <mat-spinner diameter="32"></mat-spinner>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Donut chart: Severity Distribution -->
+    <mat-card class="chart-card chart-card-sm">
+      <mat-card-header>
+        <mat-card-title>Severity Distribution</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="chart-wrapper" *ngIf="severityTotal > 0">
+          <canvas baseChart
+            type="doughnut"
+            [data]="donutChartData"
+            [options]="donutChartOptions">
+          </canvas>
+        </div>
+        <div class="empty-state" *ngIf="severityTotal === 0">
+          <mat-icon>check_circle</mat-icon>
+          <p>No findings yet</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- ── Recent Scans Feed ──────────────────────────────────────────── -->
+  <mat-card class="feed-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>history</mat-icon>
+        Recent Scans
+        <span class="live-dot" matTooltip="Auto-refreshing every 5s"></span>
+      </mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="center-message" *ngIf="loading">
+        <mat-spinner diameter="36"></mat-spinner>
+      </div>
+
+      <div class="center-message" *ngIf="!loading && !error && scans.length === 0">
+        <mat-icon>inbox</mat-icon>
+        <p>No scans yet — paste a diff or make a commit to get started.</p>
+      </div>
+
+      <mat-list *ngIf="!loading && scans.length > 0">
+        <mat-list-item
+          *ngFor="let scan of scans; trackBy: trackByScanId"
+          class="scan-item"
+          (click)="openScan(scan.id)"
+        >
+          <mat-icon matListItemIcon [class]="riskClass(scan.risk_score)">
+            {{ statusIcon(scan.status) }}
+          </mat-icon>
+
+          <div matListItemTitle class="scan-title">
+            <span class="repo-name">{{ scan.repository }}</span>
+            <span class="scan-chip" [class]="riskClass(scan.risk_score)">
+              {{ riskLabel(scan.risk_score) }}
+            </span>
+            <span class="finding-count" *ngIf="scan.finding_count > 0">
+              {{ scan.finding_count }} finding{{ scan.finding_count > 1 ? 's' : '' }}
+            </span>
+          </div>
+
+          <div matListItemLine class="scan-meta">
+            <span class="timestamp">{{ scan.created_at | date:'short' }}</span>
+            <span class="status-badge" [class]="'status-' + scan.status">
+              {{ scan.status }}
+            </span>
+          </div>
+        </mat-list-item>
+      </mat-list>
+    </mat-card-content>
+  </mat-card>
+</div>
+
+<style>
+  .dashboard-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 16px;
+  }
+
+  /* ── Project selector ────────────────────────────────────────────── */
+  .project-selector {
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .repo-select {
+    min-width: 280px;
+  }
+
+  /* ── Hero metric cards ───────────────────────────────────────────── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .metric-card {
+    text-align: center;
+    padding: 8px 0;
+    border-radius: 12px !important;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  }
+
+  .metric-icon {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    margin-bottom: 4px;
+  }
+
+  .icon-scans { color: #1976d2; }
+  .icon-findings { color: #d32f2f; }
+  .icon-clean { color: #2e7d32; }
+  .icon-risk { color: #ef6c00; }
+
+  .metric-value {
+    font-size: 2.8rem;
+    font-weight: 800;
+    line-height: 1.1;
+    color: #212121;
+  }
+
+  .metric-label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.54);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Detail row: severity + top types ────────────────────────────── */
+  .detail-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .detail-card {
+    border-radius: 12px !important;
+  }
+
+  .detail-card mat-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  /* Severity bars */
+  .severity-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 8px;
+  }
+
+  .severity-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .sev-label {
+    width: 60px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .sev-critical { color: #c62828; }
+  .sev-high { color: #d84315; }
+  .sev-medium { color: #ef6c00; }
+  .sev-low { color: #2e7d32; }
+
+  .bar-track {
+    flex: 1;
+    height: 20px;
+    background: #f5f5f5;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    min-width: 2px;
+    transition: width 0.5s ease;
+  }
+
+  .bar-critical { background: linear-gradient(90deg, #c62828, #e53935); }
+  .bar-high { background: linear-gradient(90deg, #d84315, #ff5722); }
+  .bar-medium { background: linear-gradient(90deg, #ef6c00, #ff9800); }
+  .bar-low { background: linear-gradient(90deg, #2e7d32, #4caf50); }
+
+  .sev-count {
+    width: 36px;
+    text-align: right;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  /* Top issue types */
+  .issue-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 8px;
+  }
+
+  .issue-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #fafafa;
+    border-radius: 8px;
+  }
+
+  .issue-name {
+    font-weight: 500;
+    font-size: 0.9rem;
+  }
+
+  .issue-count-badge {
+    background: #1976d2;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 12px;
+    min-width: 24px;
+    text-align: center;
+  }
+
+  /* ── Recent scans feed ───────────────────────────────────────────── */
+  .feed-card {
+    border-radius: 12px !important;
+  }
+
+  .feed-card mat-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .live-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #4caf50;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .center-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px;
+    color: rgba(0, 0, 0, 0.54);
+    gap: 8px;
+  }
+
+  .scan-item {
+    cursor: pointer;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    transition: background 0.15s;
+  }
+
+  .scan-item:hover {
+    background: rgba(0, 0, 0, 0.03);
+  }
+
+  .scan-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .repo-name { font-weight: 500; }
+
+  .scan-chip {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .risk-clean { color: #2e7d32; }
+  .risk-clean.scan-chip { background: #e8f5e9; color: #2e7d32; }
+  .risk-low { color: #ef6c00; }
+  .risk-low.scan-chip { background: #fff3e0; color: #ef6c00; }
+  .risk-medium { color: #f57f17; }
+  .risk-medium.scan-chip { background: #fff8e1; color: #f57f17; }
+  .risk-critical { color: #c62828; }
+  .risk-critical.scan-chip { background: #ffebee; color: #c62828; }
+
+  .scan-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.82rem;
+    color: rgba(0, 0, 0, 0.54);
+  }
+
+  .status-badge {
+    font-size: 0.72rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .status-completed { background: #e8f5e9; color: #2e7d32; }
+  .status-reviewing { background: #fff3e0; color: #ef6c00; }
+  .status-pending { background: #e3f2fd; color: #1565c0; }
+
+  .finding-count {
+    font-size: 0.8rem;
+    color: rgba(0, 0, 0, 0.54);
+  }
+
+  /* ── Charts ──────────────────────────────────────────────────────── */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .chart-card {
+    border-radius: 12px !important;
+  }
+
+  .chart-card mat-card-title {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .chart-wrapper {
+    position: relative;
+    height: 280px;
+    padding-top: 8px;
+  }
+
+  /* ── Responsive ──────────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    .detail-row { grid-template-columns: 1fr; }
+    .charts-row { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 500px) {
+    .metrics-grid { grid-template-columns: 1fr 1fr; }
+    .metric-value { font-size: 2rem; }
+  }
+</style>

@@ -1,0 +1,48 @@
+<mat-toolbar color="primary">
+  <span>{{ title }}</span>
+  <span class="toolbar-spacer"></span>
+  <ng-container *ngIf="auth.isLoggedIn$ | async">
+    <button mat-icon-button [matMenuTriggerFor]="userMenu">
+      <mat-icon>account_circle</mat-icon>
+    </button>
+    <mat-menu #userMenu="matMenu">
+      <div mat-menu-item disabled class="user-label">
+        <mat-icon>person</mat-icon>
+        <span>{{ auth.currentUsername$ | async }}</span>
+      </div>
+      <button mat-menu-item (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Sign Out</span>
+      </button>
+    </mat-menu>
+  </ng-container>
+</mat-toolbar>
+
+<!-- Login page: no sidebar -->
+<ng-container *ngIf="!(auth.isLoggedIn$ | async)">
+  <router-outlet />
+</ng-container>
+
+<!-- Authenticated: sidebar layout -->
+<mat-sidenav-container class="sidenav-container" *ngIf="auth.isLoggedIn$ | async">
+  <mat-sidenav mode="side" opened class="sidenav">
+    <mat-nav-list>
+      <a mat-list-item routerLink="/dashboard" routerLinkActive="active-link">
+        <mat-icon matListItemIcon>dashboard</mat-icon>
+        <span>Dashboard</span>
+      </a>
+      <a mat-list-item routerLink="/scan" routerLinkActive="active-link">
+        <mat-icon matListItemIcon>search</mat-icon>
+        <span>Scan</span>
+      </a>
+      <a mat-list-item routerLink="/reports" routerLinkActive="active-link">
+        <mat-icon matListItemIcon>description</mat-icon>
+        <span>Reports</span>
+      </a>
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="content">
+    <router-outlet />
+  </mat-sidenav-content>
+</mat-sidenav-container>

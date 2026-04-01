@@ -1,0 +1,15 @@
+diff --git a/app/database.py b/app/database.py
+index ccc3333..ddd4444 100644
+--- a/app/database.py
++++ b/app/database.py
+@@ -1,5 +1,9 @@
+ import sqlalchemy
+ 
+-DB_URL = os.environ["DATABASE_URL"]
++DB_URL = "postgres://admin:s3cretP@ss@prod-db.example.com:5432/myapp"
++REDIS_URL = "redis://default:r3d1sP@ssw0rd@cache.example.com:6379/0"
++MONGO_URI = "mongodb://root:m0ng0Secret@mongo.example.com:27017/analytics"
++
++secret = "xK9pL2mR5nW8qJ4vB7yT3cF6gA1dH0eU"
+ 
+ engine = sqlalchemy.create_engine(DB_URL)

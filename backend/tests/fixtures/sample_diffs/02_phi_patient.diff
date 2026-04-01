@@ -1,0 +1,18 @@
+diff --git a/app/intake.py b/app/intake.py
+index aaa1111..bbb2222 100644
+--- a/app/intake.py
++++ b/app/intake.py
+@@ -1,4 +1,12 @@
+ import json
+ from db import get_connection
+ 
++def process_patient_record():
++    patient_name = "Jane Doe"
++    patient_ssn = "123-45-6789"
++    MRN: 00112233
++    dob: 03/15/1985
++    diagnosis = "Type 2 Diabetes"
++    phone = "(555) 867-5309"
++    insurance_claim = "CLM-998877"
+ 
+ def run():

@@ -1,0 +1,28 @@
+<div class="scan-view-container">
+  <div class="view-header">
+    <a mat-button routerLink="/scan">
+      <mat-icon>arrow_back</mat-icon> Back to Scan
+    </a>
+    <button mat-button (click)="refresh()" *ngIf="scan && scan.status !== 'completed'">
+      <mat-icon>refresh</mat-icon> Refresh
+    </button>
+  </div>
+
+  <div *ngIf="loading" class="loading-center">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading scan results...</p>
+  </div>
+
+  <div *ngIf="error" class="error-state">
+    <mat-icon class="error-icon">error_outline</mat-icon>
+    <p>{{ error }}</p>
+    <div class="error-actions">
+      <button mat-raised-button color="primary" (click)="refresh()">
+        <mat-icon>refresh</mat-icon> Retry
+      </button>
+      <a mat-stroked-button routerLink="/scan">New Scan</a>
+    </div>
+  </div>
+
+  <app-scan-detail *ngIf="scan" [scan]="scan"></app-scan-detail>
+</div>

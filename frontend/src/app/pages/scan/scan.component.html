@@ -1,0 +1,49 @@
+<div class="scan-container">
+  <h2>Scan Code Diff</h2>
+  <p class="subtitle">Paste a unified diff below to scan for secrets, credentials, and PHI.</p>
+
+  <!-- Submission Form -->
+  <mat-card class="scan-form-card">
+    <mat-card-content>
+      <mat-form-field appearance="outline" class="diff-field">
+        <mat-label>Paste unified diff here</mat-label>
+        <textarea
+          matInput
+          [(ngModel)]="diffText"
+          rows="16"
+          placeholder="diff --git a/file.py b/file.py&#10;--- a/file.py&#10;+++ b/file.py&#10;@@ -1,3 +1,4 @@&#10; import os&#10;+SECRET_KEY = &quot;abc123&quot;"
+          class="mono-textarea"
+          [disabled]="loading"
+        ></textarea>
+      </mat-form-field>
+
+      <div class="form-row">
+        <mat-form-field appearance="outline" class="repo-field">
+          <mat-label>Repository (optional)</mat-label>
+          <input matInput [(ngModel)]="repository" [disabled]="loading" />
+        </mat-form-field>
+
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="submitScan()"
+          [disabled]="loading || !diffText.trim()"
+          class="scan-btn"
+        >
+          <mat-icon *ngIf="!loading">search</mat-icon>
+          <mat-spinner *ngIf="loading" diameter="20" class="btn-spinner"></mat-spinner>
+          {{ loading ? 'Scanning...' : 'Scan' }}
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Inline Results -->
+  <app-scan-detail *ngIf="scanResult" [scan]="scanResult"></app-scan-detail>
+
+  <!-- Empty hint when no scan has been submitted -->
+  <div *ngIf="!scanResult && !loading" class="empty-state">
+    <mat-icon>content_paste_search</mat-icon>
+    <p>Paste a unified diff above and click <strong>Scan</strong> to check for secrets, credentials, and PHI.</p>
+  </div>
+</div>

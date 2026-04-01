@@ -1,0 +1,125 @@
+<div class="report-config-container">
+  <h2>Generate Security Report</h2>
+  <p class="subtitle">Configure your report parameters and select the target audience.</p>
+
+  <form (ngSubmit)="onSubmit()" class="report-form">
+    <!-- Repository -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Repository</mat-label>
+      <mat-select [(ngModel)]="repository" name="repository" required>
+        <mat-option *ngFor="let repo of repositories" [value]="repo">{{ repo }}</mat-option>
+      </mat-select>
+      <mat-icon matPrefix>folder</mat-icon>
+      <mat-hint *ngIf="repositories.length === 0">No projects found. Run a scan first.</mat-hint>
+    </mat-form-field>
+
+    <!-- Date Range -->
+    <div class="date-range-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Start Date</mat-label>
+        <input matInput [matDatepicker]="startPicker" [(ngModel)]="startDate" name="startDate" required>
+        <mat-datepicker-toggle matIconSuffix [for]="startPicker"></mat-datepicker-toggle>
+        <mat-datepicker #startPicker></mat-datepicker>
+      </mat-form-field>
+
+      <mat-icon class="arrow-icon">arrow_forward</mat-icon>
+
+      <mat-form-field appearance="outline">
+        <mat-label>End Date</mat-label>
+        <input matInput [matDatepicker]="endPicker" [(ngModel)]="endDate" name="endDate" required>
+        <mat-datepicker-toggle matIconSuffix [for]="endPicker"></mat-datepicker-toggle>
+        <mat-datepicker #endPicker></mat-datepicker>
+      </mat-form-field>
+    </div>
+
+    <!-- Audience Toggle -->
+    <div class="audience-section">
+      <label class="audience-label">Target Audience</label>
+      <mat-button-toggle-group [(ngModel)]="audienceType" name="audienceType" class="audience-toggle">
+        <mat-button-toggle value="developer">
+          <mat-icon>code</mat-icon>
+          <span>Developer</span>
+        </mat-button-toggle>
+        <mat-button-toggle value="manager">
+          <mat-icon>groups</mat-icon>
+          <span>Engineering Manager</span>
+        </mat-button-toggle>
+        <mat-button-toggle value="leadership">
+          <mat-icon>business</mat-icon>
+          <span>Leadership</span>
+        </mat-button-toggle>
+      </mat-button-toggle-group>
+
+      <div class="audience-description">
+        @switch (audienceType) {
+          @case ('developer') {
+            <p>Technical report with code references, file paths, and specific remediation steps.</p>
+          }
+          @case ('manager') {
+            <p>Metrics-driven summary with risk heatmap, velocity impact, and resource allocation guidance.</p>
+          }
+          @case ('leadership') {
+            <p>Executive briefing with release readiness assessment and business risk translation.</p>
+          }
+        }
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <button mat-raised-button color="primary" type="submit" class="generate-btn"
+            [disabled]="loading || !repository || !startDate || !endDate">
+      @if (loading) {
+        <span class="btn-content">
+          <mat-spinner diameter="20" class="btn-spinner"></mat-spinner>
+          <span>Generating Report...</span>
+        </span>
+      } @else {
+        <span class="btn-content">
+          <mat-icon>auto_awesome</mat-icon>
+          <span>Generate Report</span>
+        </span>
+      }
+    </button>
+
+    @if (error) {
+      <div class="error-msg">
+        <mat-icon>error</mat-icon>
+        <span>{{ error }}</span>
+      </div>
+    }
+  </form>
+
+  <!-- Recent Reports -->
+  <div class="recent-reports">
+    <h3>Recent Reports</h3>
+
+    @if (reportsLoading) {
+      <div class="empty-state">
+        <mat-spinner diameter="32"></mat-spinner>
+        <p>Loading reports...</p>
+      </div>
+    } @else if (recentReports.length === 0) {
+      <div class="empty-state">
+        <mat-icon>description</mat-icon>
+        <p>No reports yet. Generate your first one above.</p>
+      </div>
+    } @else {
+      <mat-list>
+        @for (report of recentReports; track report.id) {
+          <mat-list-item class="report-item" (click)="viewReport(report.id)">
+            <mat-icon matListItemIcon>description</mat-icon>
+            <div matListItemTitle>{{ report.repository }} — {{ report.audience_type | titlecase }}</div>
+            <div matListItemLine>
+              {{ report.date_range_start }} to {{ report.date_range_end }}
+              <mat-chip-set class="status-chips">
+                <mat-chip [class]="'status-' + report.status" highlighted>
+                  {{ report.status }}
+                </mat-chip>
+              </mat-chip-set>
+            </div>
+          </mat-list-item>
+        }
+      </mat-list>
+    }
+  </div>
+</div>

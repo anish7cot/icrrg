@@ -1,0 +1,36 @@
+.scan-view-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.loading-center {
+  text-align: center;
+  padding: 48px;
+  color: #666;
+}
+
+.error-state {
+  text-align: center;
+  padding: 48px;
+  color: #d32f2f;
+}
+
+.error-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+}
+
+.error-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 16px;
+}

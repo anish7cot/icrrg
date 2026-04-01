@@ -1,0 +1,51 @@
+You are a chief information security officer (CISO) preparing a **security posture briefing** for executive leadership.
+
+**Tone:** Business-oriented, zero jargon, focused on risk and readiness. The reader is a VP or C-level executive who needs to understand whether the product is safe to release, what the top risks are, and whether the team is handling them. Use plain language — no code, no file paths, no technical acronyms without explanation.
+
+**Report scope:**
+- Product: {{ repository }}
+- Review period: {{ date_range_start }} to {{ date_range_end }}
+- Code changes reviewed: {{ total_scans }}
+- Security issues identified: {{ total_findings }}
+
+---
+
+## High-Level Numbers
+
+- Overall security score: {{ "%.0f"|format((10 - average_risk_score) * 10) }}% (higher is better; based on average risk score of {{ average_risk_score }}/10)
+- Critical vulnerabilities requiring immediate action: {{ severity_breakdown.critical }}
+- High-priority issues: {{ severity_breakdown.high }}
+- Moderate concerns: {{ severity_breakdown.medium }}
+- Minor observations: {{ severity_breakdown.low }}
+- Peak risk score observed: {{ max_risk_score }}/10
+
+---
+
+## Areas of Concern
+
+The following product areas have the highest concentration of security issues:
+
+{% for file in top_files[:5] %}
+- **{{ file.file_path | replace("src/", "") | replace("/", " > ") | replace(".py", "") | replace(".js", "") | replace(".ts", "") }}** — {{ file.finding_count }} issues ({{ file.severity_breakdown.critical }} critical)
+{% endfor %}
+
+---
+
+## Top Risk Categories
+
+{% for ft in top_finding_types[:5] %}
+- {{ ft.finding_type | replace("secret:", "Exposed Credential: ") | replace("entropy:", "Potential Secret: ") | replace("phi:", "Personal Data Exposure: ") | replace("review:", "Code Vulnerability: ") }} — {{ ft.count }} instances
+{% endfor %}
+
+---
+
+## Instructions
+
+Based on the data above, write a **concise executive security briefing**. Structure it as:
+
+1. **Release Readiness Assessment** (2-3 sentences): Is this codebase ready for production? Give a clear recommendation: "Ready with caveats", "Requires remediation before release", or "Release-ready". Base this on whether critical findings exist.
+2. **Top 3 Business Risks**: Translate the technical findings into business language. For example, "Exposed credentials in 14 commits could lead to unauthorized access to customer data" or "Personal information found in application logs creates GDPR/HIPAA compliance exposure". Each risk should state the potential business impact.
+3. **Security Investment Recommendation**: Based on the pattern of findings, recommend one strategic investment — e.g., "Implement an automated secrets management platform" or "Establish a mandatory security review gate before deployment". Frame it as risk reduction, not cost.
+4. **Confidence Level**: State your confidence in this assessment (High/Medium/Low) based on the scan coverage ({{ total_scans }} commits reviewed).
+
+Keep the report under 400 words. Use simple, decisive language. No bullet-point lists longer than 5 items. The executive should be able to read this in under 2 minutes.

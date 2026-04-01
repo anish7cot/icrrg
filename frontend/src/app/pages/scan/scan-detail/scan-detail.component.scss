@@ -1,0 +1,425 @@
+/* ── Status Bar ──────────────────────────────────────── */
+.status-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.status-completed {
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+}
+
+.status-reviewing {
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
+}
+
+.status-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-icon {
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+}
+
+.status-completed .status-icon {
+  color: #2e7d32;
+}
+
+.status-reviewing .status-icon {
+  color: #1565c0;
+}
+
+.status-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.status-main {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.status-detail {
+  font-size: 12px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.review-progress {
+  border-radius: 4px;
+}
+
+/* ── Summary Bar ─────────────────────────────────────── */
+.summary-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 16px 20px;
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.summary-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.risk-badge {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  color: white;
+  font-weight: 600;
+}
+
+.risk-value {
+  font-size: 28px;
+}
+
+.risk-label {
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+.risk-high {
+  background: #d32f2f;
+}
+
+.risk-medium {
+  background: #ef6c00;
+}
+
+.risk-low {
+  background: #388e3c;
+}
+
+.summary-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-total {
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.summary-repo {
+  font-size: 13px;
+  color: #888;
+}
+
+.severity-counts {
+  display: flex;
+  gap: 16px;
+}
+
+.severity-count-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.sc-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.sc-number {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.sc-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sc-critical {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.sc-high {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.sc-medium {
+  background: #fffde7;
+  color: #f57f17;
+}
+
+.sc-low {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.sc-zero {
+  opacity: 0.45;
+}
+
+/* ── Empty State ─────────────────────────────────────── */
+.no-findings {
+  text-align: center;
+  padding: 48px 24px;
+  color: #388e3c;
+}
+
+.success-icon {
+  font-size: 64px;
+  width: 64px;
+  height: 64px;
+}
+
+.no-findings h3 {
+  margin: 12px 0 4px;
+  font-size: 20px;
+}
+
+.no-findings p {
+  color: #666;
+}
+
+/* ── File Accordion ──────────────────────────────────── */
+.file-accordion {
+  display: block;
+}
+
+.file-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  color: #555;
+}
+
+.file-path {
+  background: #f5f5f5;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: 'Consolas', monospace;
+}
+
+.file-panel-desc {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.file-count {
+  font-weight: 700;
+  font-size: 14px;
+  color: #333;
+}
+
+.file-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+}
+
+.detection-badge {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.review-badge {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+/* ── Finding Cards ───────────────────────────────────── */
+.finding-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.finding-card {
+  border-left: 5px solid #ccc;
+  transition: box-shadow 0.15s;
+}
+
+.finding-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.finding-critical {
+  border-left-color: #d32f2f;
+}
+
+.finding-high {
+  border-left-color: #ef6c00;
+}
+
+.finding-medium {
+  border-left-color: #f9a825;
+}
+
+.finding-low {
+  border-left-color: #388e3c;
+}
+
+.finding-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.engine-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.engine-detection {
+  color: #1565c0;
+}
+
+.engine-review {
+  color: #7b1fa2;
+}
+
+.severity-critical {
+  background-color: #d32f2f !important;
+  color: white !important;
+}
+
+.severity-high {
+  background-color: #ef6c00 !important;
+  color: white !important;
+}
+
+.severity-medium {
+  background-color: #f9a825 !important;
+  color: black !important;
+}
+
+.severity-low {
+  background-color: #388e3c !important;
+  color: white !important;
+}
+
+.finding-type {
+  font-weight: 500;
+  color: #333;
+}
+
+.finding-confidence {
+  margin-left: auto;
+  color: #888;
+  font-size: 0.85em;
+}
+
+.finding-summary {
+  margin: 4px 0 8px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.finding-summary:hover {
+  color: #1565c0;
+}
+
+.expand-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  color: #888;
+}
+
+.finding-expanded {
+  background: #fafafa;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+}
+
+.block-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.explanation-block p,
+.suggestion-block p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #444;
+  line-height: 1.5;
+}
+
+.suggestion-block {
+  border-top: 1px solid #eee;
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.finding-location {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #555;
+  font-size: 0.9em;
+}
+
+.loc-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  color: #888;
+}
+
+.loc-line {
+  color: #888;
+}
