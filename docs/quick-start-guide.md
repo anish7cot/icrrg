@@ -2,9 +2,99 @@
 
 ## Prerequisites
 
-- **Backend API** running at `http://localhost:8000`
-- **PostgreSQL** and **Redis** running
-- **Poetry** virtual environment set up in `backend/`
+| Requirement | Version | Check Command |
+|-------------|---------|---------------|
+| **Python** | 3.11 – 3.13 | `python --version` |
+| **Poetry** | 1.8+ | `poetry --version` |
+| **Node.js** | 18+ | `node --version` |
+| **npm** | 9+ | `npm --version` |
+| **PostgreSQL** | 15+ | `pg_isready` |
+| **Redis** | 7+ | `redis-cli ping` |
+| **Git** | 2.30+ | `git --version` |
+
+---
+
+## 0. New Device Setup (After Cloning)
+
+Follow these steps on a fresh machine after cloning the repository.
+
+### Step 1 — Install Poetry (if not installed)
+
+**Windows (PowerShell):**
+
+```powershell
+(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
+```
+
+**macOS / Linux:**
+
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+```
+
+Then add Poetry to your PATH:
+
+- **Windows:** Add `%APPDATA%\Python\Scripts` to your system PATH, or run:
+  ```powershell
+  $env:Path += ";$env:APPDATA\Python\Scripts"
+  ```
+- **macOS / Linux:** Add `$HOME/.local/bin` to your shell profile (`~/.bashrc` or `~/.zshrc`):
+  ```bash
+  export PATH="$HOME/.local/bin:$PATH"
+  ```
+
+Verify: `poetry --version`
+
+### Step 2 — Install Backend Dependencies
+
+```powershell
+cd backend
+poetry install
+```
+
+This creates a virtual environment and installs all Python packages.
+
+### Step 3 — Install Frontend Dependencies
+
+```powershell
+cd frontend
+npm install
+```
+
+### Step 4 — Configure Environment
+
+Create a `.env` file in `backend/` with your database and Redis settings:
+
+```env
+DATABASE_URL=postgresql+asyncpg://postgres:yourpassword@localhost:5432/icrrg
+REDIS_URL=redis://localhost:6379/0
+SECRET_KEY=your-secret-key
+```
+
+### Step 5 — Run Database Migrations
+
+```powershell
+cd backend
+poetry run alembic upgrade head
+```
+
+### Step 6 — Seed the Admin User
+
+```powershell
+cd backend
+poetry run python seed_admin.py
+```
+
+> Default admin credentials — username: `admin`, password: `Admin@123`
+
+### Step 7 — Download spaCy Model
+
+```powershell
+cd backend
+poetry run python -m spacy download en_core_web_sm
+```
+
+You're now ready to start the services below.
 
 ---
 
