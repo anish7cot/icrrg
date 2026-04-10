@@ -17,9 +17,10 @@ if ($LASTEXITCODE -eq 0) {
 Write-Host ""
 Write-Host "=== Starting Backend ===" -ForegroundColor Cyan
 $backendDir = Join-Path $root "backend"
-if (Test-Path (Join-Path $backendDir "pyproject.toml")) {
+if (Test-Path (Join-Path $backendDir "requirements.txt")) {
     Write-Host "Launching FastAPI on port 8000..."
-    $cmd = "Set-Location -Path '$backendDir'; poetry run uvicorn app.main:app --reload --port 8000"
+    $venvActivate = Join-Path $backendDir "venv\Scripts\Activate.ps1"
+    $cmd = "Set-Location -Path '$backendDir'; & '$venvActivate'; uvicorn app.main:app --reload --port 8000"
     Start-Process powershell -ArgumentList "-NoExit", "-Command", $cmd
 } else {
     Write-Host "[SKIP] backend/ not found - run Task 01 first" -ForegroundColor Yellow
@@ -43,7 +44,8 @@ Write-Host "=== Starting Celery Worker ===" -ForegroundColor Cyan
 $celeryApp = Join-Path (Join-Path $backendDir "app") "celery_app.py"
 if (Test-Path $celeryApp) {
     Write-Host "Launching Celery worker..."
-    $cmd = "Set-Location -Path '$backendDir'; poetry run celery -A app.celery_app worker --loglevel=info"
+    $venvActivate = Join-Path $backendDir "venv\Scripts\Activate.ps1"
+    $cmd = "Set-Location -Path '$backendDir'; & '$venvActivate'; celery -A app.celery_app worker --loglevel=info"
     Start-Process powershell -ArgumentList "-NoExit", "-Command", $cmd
 } else {
     Write-Host "[SKIP] Celery app not found - available after Phase 2" -ForegroundColor Yellow

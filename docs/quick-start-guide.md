@@ -5,7 +5,7 @@
 | Requirement | Version | Check Command |
 |-------------|---------|---------------|
 | **Python** | 3.11 – 3.13 | `python --version` |
-| **Poetry** | 1.8+ | `poetry --version` |
+| **pip** | 22+ | `pip --version` |
 | **Node.js** | 18+ | `node --version` |
 | **npm** | 9+ | `npm --version` |
 | **PostgreSQL** | 15+ | `pg_isready` |
@@ -18,80 +18,65 @@
 
 Follow these steps on a fresh machine after cloning the repository.
 
-### Step 1 — Install Poetry (if not installed)
+### Step 1 — Create a Virtual Environment & Install Dependencies
 
 **Windows (PowerShell):**
 
 ```powershell
-(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
+cd backend
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 ```
 
 **macOS / Linux:**
 
 ```bash
-curl -sSL https://install.python-poetry.org | python3 -
-```
-
-Then add Poetry to your PATH:
-
-- **Windows:** Add `%APPDATA%\Python\Scripts` to your system PATH, or run:
-  ```powershell
-  $env:Path += ";$env:APPDATA\Python\Scripts"
-  ```
-- **macOS / Linux:** Add `$HOME/.local/bin` to your shell profile (`~/.bashrc` or `~/.zshrc`):
-  ```bash
-  export PATH="$HOME/.local/bin:$PATH"
-  ```
-
-Verify: `poetry --version`
-
-### Step 2 — Install Backend Dependencies
-
-```powershell
 cd backend
-poetry install
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 ```
 
-This creates a virtual environment and installs all Python packages.
-
-### Step 3 — Install Frontend Dependencies
+### Step 2 — Download spaCy Model
 
 ```powershell
-cd frontend
-npm install
+python -m spacy download en_core_web_sm
 ```
 
-### Step 4 — Configure Environment
+### Step 3 — Configure Environment
 
 Create a `.env` file in `backend/` with your database and Redis settings:
 
 ```env
 DATABASE_URL=postgresql+asyncpg://postgres:yourpassword@localhost:5432/icrrg
 REDIS_URL=redis://localhost:6379/0
-SECRET_KEY=your-secret-key
+OPENAI_API_KEY=your-openai-key
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
+SECRET_KEY=change-me-to-a-random-string
+CORS_ORIGINS=["http://localhost:4200"]
+DEBUG=false
 ```
 
-### Step 5 — Run Database Migrations
+### Step 4 — Run Database Migrations
 
 ```powershell
-cd backend
-poetry run alembic upgrade head
+alembic upgrade head
 ```
 
-### Step 6 — Seed the Admin User
+### Step 5 — Seed the Admin User
 
 ```powershell
-cd backend
-poetry run python seed_admin.py
+python seed_admin.py
 ```
 
 > Default admin credentials — username: `admin`, password: `Admin@123`
 
-### Step 7 — Download spaCy Model
+### Step 6 — Install Frontend Dependencies
 
 ```powershell
-cd backend
-poetry run python -m spacy download en_core_web_sm
+cd frontend
+npm install
 ```
 
 You're now ready to start the services below.
@@ -103,15 +88,24 @@ You're now ready to start the services below.
 ### Terminal 1 — Backend API
 
 ```powershell
-cd C:\Users\anish.neupane\Desktop\Hackathon\backend
-poetry run uvicorn app.main:app --reload --port 8000
+cd backend
+.\venv\Scripts\Activate.ps1
+uvicorn app.main:app --reload --port 8000
 ```
 
-### Terminal 2 — Frontend Dashboard (optional)
+### Terminal 2 — Celery Worker
 
 ```powershell
-cd C:\Users\anish.neupane\Desktop\Hackathon\frontend
-npm start
+cd backend
+.\venv\Scripts\Activate.ps1
+celery -A app.tasks.celery_app worker --loglevel=info --pool=solo
+```
+
+### Terminal 3 — Frontend Dashboard
+
+```powershell
+cd frontend
+ng serve
 ```
 
 Dashboard available at: **http://localhost:4200**
@@ -121,8 +115,9 @@ Dashboard available at: **http://localhost:4200**
 ## 2. Activate the CLI
 
 ```powershell
-cd C:\Users\anish.neupane\Desktop\Hackathon\backend
-& "C:\Users\anish.neupane\AppData\Local\pypoetry\Cache\virtualenvs\backend-HYhMOmpw-py3.13\Scripts\Activate.ps1"
+cd backend
+.\venv\Scripts\Activate.ps1
+pip install -e .
 ```
 
 Verify CLI is available:

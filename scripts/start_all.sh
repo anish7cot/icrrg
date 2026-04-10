@@ -16,9 +16,9 @@ fi
 
 # --- Start Backend ---
 echo -e "\n${CYAN}=== Starting Backend ===${NC}"
-if [ -f "$ROOT/backend/pyproject.toml" ]; then
+if [ -f "$ROOT/backend/requirements.txt" ]; then
     echo "Launching FastAPI on port 8000..."
-    (cd "$ROOT/backend" && poetry run uvicorn app.main:app --reload --port 8000) &
+    (cd "$ROOT/backend" && source venv/bin/activate && uvicorn app.main:app --reload --port 8000) &
 else
     echo -e "${YELLOW}[SKIP] backend/ not found — run Task 01 first${NC}"
 fi
@@ -36,7 +36,7 @@ fi
 echo -e "\n${CYAN}=== Starting Celery Worker ===${NC}"
 if [ -f "$ROOT/backend/app/celery_app.py" ]; then
     echo "Launching Celery worker..."
-    (cd "$ROOT/backend" && poetry run celery -A app.celery_app worker --loglevel=info) &
+    (cd "$ROOT/backend" && source venv/bin/activate && celery -A app.celery_app worker --loglevel=info) &
 else
     echo -e "${YELLOW}[SKIP] Celery app not found — available after Phase 2${NC}"
 fi
