@@ -24,7 +24,7 @@ foreach ($cmd in @("python", "python3", "py")) {
         if ($ver -match "Python (\d+)\.(\d+)") {
             $major = [int]$Matches[1]
             $minor = [int]$Matches[2]
-            if ($major -eq 3 -and $minor -ge 11 -and $minor -le 13) {
+            if ($major -eq 3 -and $minor -ge 11) {
                 $pythonCmd = $cmd
                 Write-Host " OK ($ver)" -ForegroundColor Green
                 break
@@ -34,7 +34,7 @@ foreach ($cmd in @("python", "python3", "py")) {
 }
 if (-not $pythonCmd) {
     Write-Host " FAIL" -ForegroundColor Red
-    $errors += "Python 3.11-3.13 is required. Download from https://www.python.org/downloads/"
+    $errors += "Python 3.11+ is required. Download from https://www.python.org/downloads/"
 }
 
 # -- 2. Check Node.js --

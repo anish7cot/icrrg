@@ -22,7 +22,7 @@ PYTHON_CMD=""
 for cmd in python3 python py; do
     if command -v "$cmd" &>/dev/null; then
         VER=$($cmd --version 2>&1)
-        if echo "$VER" | grep -qE "Python 3\.(1[1-3])\."; then
+        if echo "$VER" | grep -qE "Python 3\.(1[1-9]|[2-9][0-9])\." ; then
             PYTHON_CMD="$cmd"
             echo -e " ${GREEN}OK ($VER)${NC}"
             break
