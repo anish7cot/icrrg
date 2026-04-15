@@ -1,4 +1,4 @@
-# start_all.ps1 — Launch all available services in separate terminal windows
+# start_all.ps1 - Launch all services in separate terminal windows
 $root = Split-Path -Parent $PSScriptRoot
 
 # --- Check infrastructure ---
@@ -32,7 +32,7 @@ Write-Host "=== Starting Frontend ===" -ForegroundColor Cyan
 $frontendDir = Join-Path $root "frontend"
 if (Test-Path (Join-Path $frontendDir "package.json")) {
     Write-Host "Launching Angular on port 4200..."
-    $cmd = "Set-Location -Path '$frontendDir'; npm start"
+    $cmd = "Set-Location -Path '$frontendDir'; npx ng serve"
     Start-Process powershell -ArgumentList "-NoExit", "-Command", $cmd
 } else {
     Write-Host "[SKIP] frontend/ not found - run Task 05 first" -ForegroundColor Yellow
@@ -41,11 +41,11 @@ if (Test-Path (Join-Path $frontendDir "package.json")) {
 # --- Start Celery Worker ---
 Write-Host ""
 Write-Host "=== Starting Celery Worker ===" -ForegroundColor Cyan
-$celeryApp = Join-Path (Join-Path $backendDir "app") "celery_app.py"
+$celeryApp = Join-Path (Join-Path $backendDir "app") "tasks\celery_app.py"
 if (Test-Path $celeryApp) {
     Write-Host "Launching Celery worker..."
     $venvActivate = Join-Path $backendDir "venv\Scripts\Activate.ps1"
-    $cmd = "Set-Location -Path '$backendDir'; & '$venvActivate'; celery -A app.celery_app worker --loglevel=info"
+    $cmd = "Set-Location -Path '$backendDir'; & '$venvActivate'; celery -A app.tasks.celery_app worker --loglevel=info --pool=solo"
     Start-Process powershell -ArgumentList "-NoExit", "-Command", $cmd
 } else {
     Write-Host "[SKIP] Celery app not found - available after Phase 2" -ForegroundColor Yellow

@@ -16,7 +16,31 @@
 
 ## 0. New Device Setup (After Cloning)
 
-Follow these steps on a fresh machine after cloning the repository.
+### Quick Setup (Recommended)
+
+**One-click (Windows):** Double-click **`setup.bat`** in the project root.
+
+Or run from terminal:
+
+**Windows (PowerShell):**
+
+```powershell
+.\scripts\setup.ps1
+```
+
+**macOS / Linux:**
+
+```bash
+bash scripts/setup.sh
+```
+
+The script checks Python, Node.js, npm, PostgreSQL, and Redis versions, then sets up the backend (venv, pip install, migrations, seeding) and frontend (npm install) in one go. If anything is missing, it tells you exactly what to install. It also auto-creates `backend/.env` from `.env.example` if missing.
+
+---
+
+### Manual Setup (Step by Step)
+
+If you prefer to set things up manually, follow these steps:
 
 ### Step 1 — Create a Virtual Environment & Install Dependencies
 
