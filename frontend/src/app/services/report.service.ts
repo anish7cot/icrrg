@@ -82,4 +82,11 @@ export class ReportService {
       params: { limit: limit.toString() },
     });
   }
+
+  exportPdf(id: string): Observable<Blob> {
+    return this.http.get(`${this.baseUrl}/${id}/export`, {
+      params: { format: 'pdf' },
+      responseType: 'blob',
+    });
+  }
 }

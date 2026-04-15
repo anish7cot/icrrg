@@ -1,13 +1,16 @@
 """POST /api/v1/reports  — queue report generation.
 GET  /api/v1/reports/{id} — retrieve a report (poll for completion).
+GET  /api/v1/reports/{id}/export — download report as PDF.
 """
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import date, datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,6 +18,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_session
 from app.db.models.report import Report
 from app.reports.aggregator import AggregationResult, aggregate_scan_data
+from app.reports.pdf_export import generate_pdf
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/reports", tags=["reports"])
 
@@ -185,3 +191,68 @@ async def list_reports(
     result = await session.execute(stmt)
     reports = result.scalars().all()
     return reports
+
+
+# ---------------------------------------------------------------------------
+# GET /api/v1/reports/{report_id}/export — download as PDF
+# ---------------------------------------------------------------------------
+@router.get("/{report_id}/export")
+async def export_report(
+    report_id: uuid.UUID,
+    format: str = Query(default="pdf", description="Export format: pdf"),
+    session: AsyncSession = Depends(get_session),
+):
+    """Export a completed report as a downloadable PDF document."""
+    # Validate format
+    if format not in ("pdf",):
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unsupported export format '{format}'. Supported: pdf",
+        )
+
+    # Fetch report
+    stmt = select(Report).where(Report.id == report_id)
+    result = await session.execute(stmt)
+    report = result.scalar_one_or_none()
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    # Must be completed with content
+    if report.status != "completed" or not report.content:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Report is not ready for export (status: {report.status})",
+        )
+
+    # Generate PDF
+    try:
+        pdf_bytes = generate_pdf(
+            markdown_content=report.content,
+            repository=report.repository,
+            audience_type=report.audience_type,
+            date_range_start=report.date_range_start,
+            date_range_end=report.date_range_end,
+            generated_at=report.created_at,
+        )
+    except Exception as exc:
+        logger.error("PDF generation failed for report %s: %s", report_id, exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate PDF. Please try exporting as Markdown instead.",
+        )
+
+    # Build filename
+    filename = (
+        f"{report.repository}-{report.audience_type}-report-"
+        f"{report.date_range_start.isoformat()}-to-"
+        f"{report.date_range_end.isoformat()}.pdf"
+    )
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Length": str(len(pdf_bytes)),
+        },
+    )

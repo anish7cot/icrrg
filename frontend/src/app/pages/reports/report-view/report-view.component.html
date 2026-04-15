@@ -31,14 +31,26 @@
         </div>
         <div class="header-actions">
           @if (report.status === 'completed' && report.content) {
-            <button mat-stroked-button (click)="exportPdf()" matTooltip="Print or save as PDF">
-              <mat-icon>picture_as_pdf</mat-icon>
-              Export PDF
+            <button mat-stroked-button (click)="exportPdf()" [disabled]="exportingPdf" matTooltip="Download as PDF document">
+              @if (exportingPdf) {
+                <ng-container>
+                  <mat-spinner diameter="18" class="inline-spinner"></mat-spinner>
+                  Generating PDF...
+                </ng-container>
+              } @else {
+                <ng-container>
+                  <mat-icon>picture_as_pdf</mat-icon>
+                  Export PDF
+                </ng-container>
+              }
             </button>
             <button mat-stroked-button (click)="exportMarkdown()" matTooltip="Download as .md file">
               <mat-icon>download</mat-icon>
               Export Markdown
             </button>
+          }
+          @if (exportError) {
+            <span class="export-error">{{ exportError }}</span>
           }
           <button mat-stroked-button routerLink="/reports" matTooltip="Back to report list">
             <mat-icon>arrow_back</mat-icon>

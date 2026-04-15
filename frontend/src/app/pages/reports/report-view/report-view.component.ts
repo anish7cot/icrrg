@@ -37,6 +37,9 @@ export class ReportViewComponent implements OnInit, OnDestroy {
   error = '';
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
+  exportingPdf = false;
+  exportError = '';
+
   constructor(
     private route: ActivatedRoute,
     private reportService: ReportService,
@@ -100,6 +103,24 @@ export class ReportViewComponent implements OnInit, OnDestroy {
   }
 
   exportPdf(): void {
-    window.print();
+    if (!this.report || this.exportingPdf) return;
+    this.exportingPdf = true;
+    this.exportError = '';
+
+    this.reportService.exportPdf(this.report.id).subscribe({
+      next: (blob) => {
+        this.exportingPdf = false;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${this.report!.repository}-${this.report!.audience_type}-report.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => {
+        this.exportingPdf = false;
+        this.exportError = 'Failed to generate PDF. Try exporting as Markdown instead.';
+      },
+    });
   }
 }

@@ -8,18 +8,18 @@ from app.db.models.user import User
 
 async def main():
     async with async_session() as s:
-        result = await s.execute(select(User).where(User.username == "admin"))
+        result = await s.execute(select(User).where(User.username == "postgres"))
         user = result.scalar_one_or_none()
         if user:
             await s.execute(
                 update(User)
-                .where(User.username == "admin")
-                .values(hashed_password=hash_password("Admin@123"))
+                .where(User.username == "postgres")
+                .values(hashed_password=hash_password("admin"))
             )
             await s.commit()
             print("admin password updated to Admin@123")
         else:
-            s.add(User(username="admin", hashed_password=hash_password("Admin@123")))
+            s.add(User(username="admin", hashed_password=hash_password("admin")))
             await s.commit()
             print("admin user created with password Admin@123")
 

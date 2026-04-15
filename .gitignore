@@ -25,3 +25,5 @@ Thumbs.db
 
 # Poetry
 poetry.lock
+venv
+*/backend/venv/
