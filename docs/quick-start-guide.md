@@ -84,6 +84,8 @@ CORS_ORIGINS=["http://localhost:4200"]
 DEBUG=false
 ```
 
+> **Special characters in passwords:** If your PostgreSQL password contains special characters like `@`, `#`, or `!`, percent-encode them in the URL (e.g., `@` becomes `%40`). The backend’s database session layer automatically decodes percent-encoded passwords before connecting.
+
 ### Step 4 — Run Database Migrations
 
 ```powershell

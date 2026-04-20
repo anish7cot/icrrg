@@ -45,9 +45,34 @@ export interface ScanNotification {
   timestamp: string;
 }
 
+export interface ScanAccuracy {
+  scan_id: string;
+  total_findings: number;
+  reviewed_findings: number;
+  true_positive: number;
+  false_positive: number;
+  disputed: number;
+  precision: number;
+  review_coverage: number;
+}
+
+export interface FeedbackRequest {
+  verdict: 'true_positive' | 'false_positive' | 'disputed';
+  comment?: string;
+}
+
+export interface FeedbackResponse {
+  id: string;
+  scan_finding_id: string;
+  user_id: string;
+  verdict: string;
+  comment: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ScanService {
   private readonly baseUrl = '/api/v1/scans';
+  private readonly findingsUrl = '/api/v1/findings';
 
   constructor(private http: HttpClient) {}
 
@@ -74,5 +99,20 @@ export class ScanService {
     if (since) params = params.set('since', since);
     if (repository) params = params.set('repository', repository);
     return this.http.get<ScanNotification[]>(`${this.baseUrl}/poll`, { params });
+  }
+
+  getScanAccuracy(scanId: string): Observable<ScanAccuracy> {
+    return this.http.get<ScanAccuracy>(`${this.findingsUrl}/scan/${scanId}/accuracy`);
+  }
+
+  submitFeedback(findingId: string, request: FeedbackRequest): Observable<FeedbackResponse> {
+    return this.http.post<FeedbackResponse>(
+      `${this.findingsUrl}/${findingId}/feedback`,
+      request,
+    );
+  }
+
+  getFeedback(findingId: string): Observable<FeedbackResponse[]> {
+    return this.http.get<FeedbackResponse[]>(`${this.findingsUrl}/${findingId}/feedback`);
   }
 }

@@ -6,7 +6,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { Finding, ScanResponse } from '../../../services/scan.service';
+import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { Finding, ScanResponse, ScanAccuracy, ScanService } from '../../../services/scan.service';
 
 interface SeverityCount {
   label: string;
@@ -40,6 +42,8 @@ const SEVERITY_ORDER: Record<string, number> = {
     MatDividerModule,
     MatExpansionModule,
     MatProgressBarModule,
+    MatButtonModule,
+    MatTooltipModule,
   ],
   templateUrl: './scan-detail.component.html',
   styleUrls: ['./scan-detail.component.scss'],
@@ -53,6 +57,14 @@ export class ScanDetailComponent implements OnChanges {
   detectionFindings: Finding[] = [];
   reviewFindings: Finding[] = [];
   expandedIds = new Set<string>();
+
+  // Accuracy & feedback state
+  accuracy: ScanAccuracy | null = null;
+  accuracyLoading = false;
+  feedbackVerdicts: Record<string, string> = {}; // findingId → verdict
+  feedbackSubmitting = new Set<string>();
+
+  constructor(private scanService: ScanService) {}
 
   get riskLevel(): string {
     const score = this.scan?.risk_score ?? 0;
@@ -70,12 +82,16 @@ export class ScanDetailComponent implements OnChanges {
       this.reviewFindings = this.scan.findings.filter(f => this.isReviewFinding(f));
       this.severityCounts = this.buildSeverityCounts();
       this.fileGroups = this.buildFileGroups();
+      if (this.scan.status === 'completed') {
+        this.loadAccuracy();
+      }
     } else {
       this.sortedFindings = [];
       this.severityCounts = [];
       this.fileGroups = [];
       this.detectionFindings = [];
       this.reviewFindings = [];
+      this.accuracy = null;
     }
   }
 
@@ -111,6 +127,35 @@ export class ScanDetailComponent implements OnChanges {
   getSuggestion(f: Finding): string {
     // Suggestions are stored in explanation for LLM findings
     return '';
+  }
+
+  submitVerdict(finding: Finding, verdict: 'true_positive' | 'false_positive' | 'disputed'): void {
+    if (this.feedbackSubmitting.has(finding.id)) return;
+    this.feedbackSubmitting.add(finding.id);
+    this.scanService.submitFeedback(finding.id, { verdict }).subscribe({
+      next: () => {
+        this.feedbackVerdicts[finding.id] = verdict;
+        this.feedbackSubmitting.delete(finding.id);
+        this.loadAccuracy();
+      },
+      error: () => {
+        this.feedbackSubmitting.delete(finding.id);
+      },
+    });
+  }
+
+  private loadAccuracy(): void {
+    if (!this.scan) return;
+    this.accuracyLoading = true;
+    this.scanService.getScanAccuracy(this.scan.id).subscribe({
+      next: (acc) => {
+        this.accuracy = acc;
+        this.accuracyLoading = false;
+      },
+      error: () => {
+        this.accuracyLoading = false;
+      },
+    });
   }
 
   private buildSeverityCounts(): SeverityCount[] {

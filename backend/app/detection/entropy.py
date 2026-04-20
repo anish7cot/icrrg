@@ -58,6 +58,7 @@ _SKIP_PATH_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"(?i)/fixtures?/"),
     re.compile(r"(?i)/mocks?/"),
     re.compile(r"(?i)\.md$"),
+    re.compile(r"(?i)(?:^|/)eval/benchmarks?/"),  # evaluation benchmark data
 ]
 
 # Regex to extract candidate strings: quoted strings or long unquoted tokens

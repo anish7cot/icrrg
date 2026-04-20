@@ -4,5 +4,10 @@ from app.db.models.scan_finding import ScanFinding
 from app.db.models.report import Report
 from app.db.models.user import User
 from app.db.models.user_project import UserProject
+from app.db.models.eval_run import EvalRun
+from app.db.models.finding_feedback import FindingFeedback
 
-__all__ = ["Base", "Scan", "ScanFinding", "Report", "User", "UserProject"]
+__all__ = [
+    "Base", "Scan", "ScanFinding", "Report",
+    "User", "UserProject", "EvalRun", "FindingFeedback",
+]

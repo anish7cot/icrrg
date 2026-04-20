@@ -132,7 +132,22 @@ Traditional SAST tools (SonarQube, Semgrep) are rule-based — they catch known 
 
 ---
 
-### 5. Report Generation Engine
+### 5. Evaluation & Accuracy Feedback Loop
+
+**What it does:** Tracks detection accuracy through benchmark evaluation and human feedback, closing the loop between automated analysis and real-world correctness.
+
+**Architecture:**
+- **Benchmark Evaluation:** Pre-defined scenarios (detection and LLM review) are run against the pipeline, computing precision, recall, and F1 scores across true-positive, false-positive, and false-negative counts.
+- **Human Feedback:** Reviewers can rate individual findings as `true_positive`, `false_positive`, or `disputed`. This feedback is persisted per finding and aggregated per scan.
+- **Per-Scan Accuracy:** For each completed scan, the system calculates reviewed coverage, precision, and TP/FP/disputed distribution — surfaced in both the API and the Angular dashboard.
+
+**Stack:**
+- FastAPI endpoints: `POST /api/v1/eval/run`, `GET /api/v1/eval/runs`, `GET /api/v1/findings/scan/{scan_id}/accuracy`, `POST /api/v1/findings/{finding_id}/feedback`
+- Angular scan-detail component with inline accuracy panel and per-finding verdict buttons
+
+---
+
+### 6. Report Generation Engine
 
 **What it does:** Generates natural-language reports from commit history, tailored to the reader's role.
 
@@ -154,13 +169,13 @@ Traditional SAST tools (SonarQube, Semgrep) are rule-based — they catch known 
 
 ---
 
-### 6. Angular Dashboard (Frontend)
+### 7. Angular Dashboard (Frontend)
 
 **What it does:** Provides the visual interface for the entire platform.
 
 **Key Views:**
 - **Scan Dashboard:** Real-time feed of recent commit scans, filterable by repo/author/severity
-- **Commit Detail View:** Deep dive into a specific commit's findings with inline diff annotations
+- **Commit Detail View:** Deep dive into a specific commit's findings with inline diff annotations, per-finding feedback buttons (true positive / false positive / disputed), and a scan-level accuracy panel showing precision, review coverage, and TP/FP/disputed counts
 - **Report Generator:** Form to configure and generate role-based reports, with preview and export
 - **Trend Analytics:** Charts showing issue trends over time, most common vulnerability types, top contributors to debt
 - **Settings:** API key configuration, severity thresholds, notification preferences
@@ -174,15 +189,25 @@ Traditional SAST tools (SonarQube, Semgrep) are rule-based — they catch known 
 
 ---
 
-### 7. API Layer (Backend)
+### 8. API Layer (Backend)
 
 **What it does:** Central nervous system — all requests flow through here.
 
 **Architecture:**
 - RESTful API with clear resource-oriented endpoints
+- JWT-based authentication (register, login, token management)
 - Async request handling for ML inference operations
 - Background task processing via Celery for long-running analysis
 - WebSocket support for real-time scan status updates to the dashboard
+- Evaluation & feedback endpoints for accuracy tracking
+
+**Implemented Endpoint Groups:**
+- `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `GET /api/v1/auth/me` — Authentication
+- `POST /api/v1/scans`, `GET /api/v1/scans/{id}`, `GET /api/v1/scans` — Scan submission and retrieval
+- `POST /api/v1/reports`, `GET /api/v1/reports/{id}` — Report generation
+- `GET /api/v1/stats`, `GET /api/v1/stats/trends` — Dashboard metrics and trend data
+- `POST /api/v1/eval/run`, `GET /api/v1/eval/runs`, `GET /api/v1/eval/runs/{id}` — Benchmark evaluation
+- `POST /api/v1/findings/{id}/feedback`, `GET /api/v1/findings/accuracy`, `GET /api/v1/findings/scan/{scan_id}/accuracy` — Finding feedback and accuracy
 
 **Stack:**
 - FastAPI (async, auto-docs via OpenAPI/Swagger, Pydantic validation)
@@ -247,6 +272,19 @@ Results Engine aggregates findings
         ├──► Return summary to CLI (block/allow commit decision)
         ├──► Push to WebSocket (real-time dashboard update)
         └──► Trigger notification if critical findings
+
+        ┌──────────────────────────────────────────────┐
+        │          ACCURACY FEEDBACK LOOP               │
+        │                                              │
+        │  Reviewer rates finding (TP / FP / Disputed) │
+        │         │                                    │
+        │         ▼                                    │
+        │  Per-scan accuracy recalculated              │
+        │  (precision, coverage, distribution)          │
+        │         │                                    │
+        │         ▼                                    │
+        │  Dashboard displays accuracy panel            │
+        └──────────────────────────────────────────────┘
 ```
 
 ---
@@ -271,6 +309,7 @@ Results Engine aggregates findings
 - All API endpoints require authentication (JWT-based for hackathon, OAuth 2.0 for production).
 - Rate limiting on the scan endpoint to prevent abuse.
 - Input validation on all endpoints via Pydantic schemas — no raw string processing.
+- Database session layer handles percent-encoded passwords in `DATABASE_URL` to prevent authentication failures when passwords contain special characters (e.g., `@`, `#`).
 
 ---
 

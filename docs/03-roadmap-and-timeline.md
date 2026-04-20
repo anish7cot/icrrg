@@ -153,6 +153,7 @@ This is your safety net. Things that eat buffer time:
 | **P1 — Should Have** | Git hook integration (live commit block) | Weakens "shift-left" narrative |
 | **P2 — Nice to Have** | All three report roles | One role is sufficient for demo |
 | **P2 — Nice to Have** | Trend analytics / charts | Dashboard can be simpler |
+| **P2 — Nice to Have** | Evaluation benchmarks & accuracy tracking | Strengthens credibility but not required for core demo |
 | **P3 — Stretch** | PDF export | Markdown preview is enough |
 | **P3 — Stretch** | Email notifications | Live demo doesn't need this |
 | **P3 — Stretch** | WebSocket real-time updates | Polling or manual refresh is fine |
@@ -171,6 +172,21 @@ Hour 38 ─── Phase 5: Polish ───────────────�
 Hour 46 ─── Phase 6: Buffer ──────────────── Contingency ✓
 Hour 48 ─── DEMO TIME
 ```
+
+---
+
+## Implemented Beyond Original Roadmap
+
+The following capabilities were built in addition to the phased plan above:
+
+| Feature | Description | Phase Added |
+|---|---|---|
+| **JWT Authentication** | User registration, login, and token-based API protection (`/api/v1/auth/*`) | Phase 0 |
+| **Dashboard Stats & Trends** | Aggregate metrics endpoint (`/api/v1/stats`) and 30-day trend data (`/api/v1/stats/trends`) | Phase 5 |
+| **Benchmark Evaluation** | Run detection/LLM benchmarks with precision, recall, F1 scoring (`/api/v1/eval/*`) | Phase 5 |
+| **Finding Feedback & Accuracy** | Per-finding TP/FP/disputed verdicts and per-scan accuracy metrics (`/api/v1/findings/*`) | Phase 5 |
+| **Frontend Accuracy Panel** | Scan detail view displays accuracy metrics (precision, coverage, TP/FP/disputed counts) with inline feedback buttons | Phase 5 |
+| **Database URL Encoding Fix** | `_safe_database_url()` in `session.py` handles percent-encoded passwords transparently | Phase 0 |
 
 ---
 

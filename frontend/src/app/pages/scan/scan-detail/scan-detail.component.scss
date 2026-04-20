@@ -423,3 +423,164 @@
 .loc-line {
   color: #888;
 }
+
+/* ── Accuracy Panel ─────────────────────────────────── */
+.accuracy-panel {
+  background: #f5f5ff;
+  border: 1px solid #c5cae9;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.accuracy-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.accuracy-title-icon {
+  color: #3f51b5;
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
+}
+
+.accuracy-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: #333;
+}
+
+.accuracy-subtitle {
+  margin-left: auto;
+  font-size: 12px;
+  color: #888;
+}
+
+.accuracy-metrics {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.metric-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 18px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  min-width: 80px;
+}
+
+.metric-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #333;
+}
+
+.metric-good { color: #2e7d32; }
+.metric-warn { color: #ef6c00; }
+.metric-bad  { color: #d32f2f; }
+.metric-tp   { color: #2e7d32; }
+.metric-fp   { color: #d32f2f; }
+.metric-disputed { color: #f57f17; }
+
+.metric-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-top: 2px;
+}
+
+.accuracy-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #666;
+  padding: 8px 0 0;
+}
+
+.hint-icon {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  color: #f9a825;
+}
+
+.accuracy-loading {
+  font-size: 13px;
+  color: #888;
+  padding: 8px 0;
+}
+
+/* ── Finding Feedback Buttons ───────────────────────── */
+.finding-feedback {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #eee;
+}
+
+.feedback-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-right: 4px;
+}
+
+.fb-btn {
+  font-size: 11px !important;
+  min-width: 0 !important;
+  padding: 2px 10px !important;
+  line-height: 28px !important;
+  border-radius: 14px !important;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    margin-right: 2px;
+  }
+}
+
+.fb-tp {
+  color: #388e3c;
+  border-color: #a5d6a7 !important;
+}
+
+.fb-fp {
+  color: #d32f2f;
+  border-color: #ef9a9a !important;
+}
+
+.fb-disputed {
+  color: #f57f17;
+  border-color: #fff176 !important;
+}
+
+.fb-active.fb-tp {
+  background: #e8f5e9 !important;
+  border-color: #388e3c !important;
+  font-weight: 600;
+}
+
+.fb-active.fb-fp {
+  background: #ffebee !important;
+  border-color: #d32f2f !important;
+  font-weight: 600;
+}
+
+.fb-active.fb-disputed {
+  background: #fffde7 !important;
+  border-color: #f57f17 !important;
+  font-weight: 600;
+}

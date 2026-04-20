@@ -41,8 +41,12 @@ Hackathon/
 │   │   ├── api/                                # API layer — route definitions only
 │   │   │   ├── v1/                             # API version 1
 │   │   │   │   ├── router.py                   # Aggregates all v1 routers
-│   │   │   ├── scans.py                    # POST /scans, GET /scans/{id}
+│   │   │   │   ├── auth.py                     # POST /auth/register, /auth/login, GET /auth/me
+│   │   │   │   ├── scans.py                    # POST /scans, GET /scans/{id}, GET /scans
 │   │   │   │   ├── reports.py                  # POST /reports, GET /reports/{id}
+│   │   │   │   ├── stats.py                    # GET /stats (dashboard metrics), GET /stats/trends
+│   │   │   │   ├── eval.py                     # POST /eval/run, GET /eval/runs, GET /eval/runs/{id}
+│   │   │   │   ├── feedback.py                 # POST /findings/{id}/feedback, GET /findings/accuracy, GET /findings/scan/{id}/accuracy
 │   │   │   │   ├── commits.py                  # GET /commits (history retrieval)
 │   │   │   │   ├── dashboard.py                # GET /dashboard/metrics
 │   │   │   │   └── webhooks.py                 # POST /webhooks/bitbucket
@@ -188,10 +192,10 @@ Hackathon/
 │       │       │   │   ├── scan-submit.component.ts
 │       │       │   │   ├── scan-submit.component.html
 │       │       │   │   └── scan-submit.component.scss
-│       │       │   └── scan-detail/            # Detailed view of scan results
-│       │       │       ├── scan-detail.component.ts
-│       │       │       ├── scan-detail.component.html
-│       │       │       └── scan-detail.component.scss
+│       │       └── scan-detail/            # Detailed view of scan results + accuracy panel
+│       │       │       ├── scan-detail.component.ts   # Loads findings, accuracy, handles feedback
+│       │       │       ├── scan-detail.component.html  # Accuracy panel, per-finding verdict buttons
+│       │       │       └── scan-detail.component.scss  # Severity colors, accuracy panel styles
 │       │       │
 │       │       ├── reports/                    # Report generation and viewing
 │       │       │   ├── report-config/          # Report configuration form
@@ -225,7 +229,7 @@ Hackathon/
 
 | Directory | Responsibility | Changes Frequently? |
 |---|---|---|
-| `app/api/v1/` | HTTP route definitions only — thin controllers that call services | Rarely after initial setup |
+| `app/api/v1/` | HTTP route definitions only — thin controllers that call services. Includes auth, scans, reports, stats, eval, and feedback endpoints. | Rarely after initial setup |
 | `app/detection/` | Everything related to PHI and secret scanning | Heavily during Phase 1 |
 | `app/review/` | Everything related to LLM code review | Heavily during Phase 2 |
 | `app/reports/` | Everything related to report generation | Heavily during Phase 3 |

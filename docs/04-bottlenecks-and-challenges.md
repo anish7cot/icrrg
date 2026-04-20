@@ -173,6 +173,29 @@ LLMs are non-deterministic. The same prompt with the same input can produce diff
 
 ---
 
+## 11. Database URL Special Characters
+
+### The Problem
+Database passwords containing special characters (`@`, `#`, `!`, etc.) are percent-encoded in `DATABASE_URL` (e.g., `hdr@123` becomes `hdr%40123`). The `asyncpg` driver does not automatically decode these, resulting in `InvalidPasswordError: password authentication failed` — a confusing failure that appears to be a wrong-password issue when the password is actually correct.
+
+### Mitigation
+- **Decode percent-encoded passwords in the session layer.** The `_safe_database_url()` function in `app/db/session.py` parses the raw URL, decodes the password with `urllib.parse.unquote()`, and rebuilds the SQLAlchemy URL with the decoded password before creating the engine. This is transparent to the rest of the application.
+- **Document the requirement.** The quick-start guide now notes that special characters in database passwords must be percent-encoded in `.env`, and the backend handles decoding automatically.
+
+---
+
+## 12. Accuracy & Trust — Closing the Feedback Loop
+
+### The Problem
+Without a way to measure and improve detection accuracy, teams have no data to back up claims about how well the scanner works. During a hackathon pitch, saying "it catches secrets" is weaker than saying "it achieves 94% precision across 50 reviewed findings."
+
+### Mitigation
+- **Benchmark evaluation pipeline.** The `POST /api/v1/eval/run` endpoint runs pre-defined scenarios against the detection and LLM review engines, computing precision, recall, and F1 scores automatically.
+- **Human-in-the-loop feedback.** Reviewers can rate each finding as true positive, false positive, or disputed directly in the scan detail UI. Per-scan accuracy metrics (precision, review coverage, TP/FP distribution) are calculated and displayed in real time.
+- **Use accuracy data in the demo.** Show judges that the system tracks its own performance — this demonstrates maturity beyond a prototype.
+
+---
+
 ## Risk Summary Matrix
 
 | Risk | Likelihood | Impact | Mitigation Effort | Priority |
@@ -188,6 +211,8 @@ LLMs are non-deterministic. The same prompt with the same input can produce diff
 | Demo data quality | Medium | High | Low (intentional prep) | Phase 5 |
 | API cost overrun | Low | Medium | Low (budget limits) | Phase 0 |
 | LLM output inconsistency | Medium | Medium | Medium (structured outputs) | Phase 2 |
+| Database URL encoding failures | Medium | High | Low (_safe_database_url) | Phase 0 |
+| No accuracy measurement | Medium | Medium | Medium (eval + feedback APIs) | Phase 5 |
 
 ---
 

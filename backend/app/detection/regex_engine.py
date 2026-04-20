@@ -27,6 +27,7 @@ _SKIP_PATH_PATTERNS: list[re.Pattern[str]] = [
     re.compile(r"(?i)/fixtures?/"),         # test fixtures
     re.compile(r"(?i)/mocks?/"),            # mocks
     re.compile(r"(?i)\.md$"),              # documentation files
+    re.compile(r"(?i)(?:^|/)eval/benchmarks?/"),  # evaluation benchmark data
 ]
 
 # Line-level patterns that suggest a comment or placeholder

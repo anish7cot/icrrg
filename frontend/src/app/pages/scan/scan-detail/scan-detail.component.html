@@ -49,6 +49,51 @@
   <p>The diff looks clean — no secrets, credentials, or PHI detected.</p>
 </div>
 
+<!-- Accuracy Panel -->
+<div class="accuracy-panel" *ngIf="scan && scan.status === 'completed' && scan.findings.length > 0">
+  <div class="accuracy-header">
+    <mat-icon class="accuracy-title-icon">analytics</mat-icon>
+    <span class="accuracy-title">Scan Accuracy</span>
+    <span class="accuracy-subtitle" *ngIf="accuracy">
+      {{ accuracy.reviewed_findings }} of {{ accuracy.total_findings }} findings reviewed
+    </span>
+  </div>
+
+  <div class="accuracy-metrics" *ngIf="accuracy">
+    <div class="metric-card">
+      <span class="metric-value" [class.metric-good]="accuracy.precision >= 0.8" [class.metric-warn]="accuracy.precision >= 0.5 && accuracy.precision < 0.8" [class.metric-bad]="accuracy.precision < 0.5 && accuracy.reviewed_findings > 0">
+        {{ accuracy.reviewed_findings > 0 ? (accuracy.precision * 100 | number:'1.0-0') + '%' : '—' }}
+      </span>
+      <span class="metric-label">Precision</span>
+    </div>
+    <div class="metric-card">
+      <span class="metric-value metric-tp">{{ accuracy.true_positive }}</span>
+      <span class="metric-label">True Positives</span>
+    </div>
+    <div class="metric-card">
+      <span class="metric-value metric-fp">{{ accuracy.false_positive }}</span>
+      <span class="metric-label">False Positives</span>
+    </div>
+    <div class="metric-card">
+      <span class="metric-value metric-disputed">{{ accuracy.disputed }}</span>
+      <span class="metric-label">Disputed</span>
+    </div>
+    <div class="metric-card">
+      <span class="metric-value">{{ (accuracy.review_coverage * 100) | number:'1.0-0' }}%</span>
+      <span class="metric-label">Coverage</span>
+    </div>
+  </div>
+
+  <div class="accuracy-hint" *ngIf="accuracy && accuracy.reviewed_findings === 0">
+    <mat-icon class="hint-icon">lightbulb</mat-icon>
+    Rate findings below as true positive, false positive, or disputed to track scan accuracy.
+  </div>
+
+  <div class="accuracy-loading" *ngIf="accuracyLoading && !accuracy">
+    Loading accuracy data...
+  </div>
+</div>
+
 <!-- Findings Grouped by File -->
 <mat-accordion *ngIf="fileGroups.length > 0" multi class="file-accordion">
   <mat-expansion-panel *ngFor="let group of fileGroups" [expanded]="true">
@@ -109,6 +154,41 @@
           <div class="finding-location" *ngIf="finding.line_number">
             <mat-icon class="loc-icon">place</mat-icon>
             <span class="loc-line">Line {{ finding.line_number }}</span>
+          </div>
+
+          <!-- Feedback Buttons -->
+          <div class="finding-feedback" *ngIf="scan && scan.status === 'completed'">
+            <span class="feedback-label">Rate:</span>
+            <button
+              mat-stroked-button
+              class="fb-btn fb-tp"
+              [class.fb-active]="feedbackVerdicts[finding.id] === 'true_positive'"
+              [disabled]="feedbackSubmitting.has(finding.id)"
+              matTooltip="True Positive — this is a real issue"
+              (click)="submitVerdict(finding, 'true_positive')"
+            >
+              <mat-icon>check_circle</mat-icon> TP
+            </button>
+            <button
+              mat-stroked-button
+              class="fb-btn fb-fp"
+              [class.fb-active]="feedbackVerdicts[finding.id] === 'false_positive'"
+              [disabled]="feedbackSubmitting.has(finding.id)"
+              matTooltip="False Positive — this is not a real issue"
+              (click)="submitVerdict(finding, 'false_positive')"
+            >
+              <mat-icon>cancel</mat-icon> FP
+            </button>
+            <button
+              mat-stroked-button
+              class="fb-btn fb-disputed"
+              [class.fb-active]="feedbackVerdicts[finding.id] === 'disputed'"
+              [disabled]="feedbackSubmitting.has(finding.id)"
+              matTooltip="Disputed — unsure if this is a real issue"
+              (click)="submitVerdict(finding, 'disputed')"
+            >
+              <mat-icon>help_outline</mat-icon> ?
+            </button>
           </div>
         </mat-card-content>
       </mat-card>

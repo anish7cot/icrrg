@@ -9,6 +9,8 @@ from app.api.v1.scans import router as scans_router
 from app.api.v1.reports import router as reports_router
 from app.api.v1.stats import router as stats_router
 from app.api.v1.auth import router as auth_router
+from app.api.v1.eval import router as eval_router
+from app.api.v1.feedback import router as feedback_router
 
 app = FastAPI(title=settings.APP_NAME)
 
@@ -24,6 +26,8 @@ app.include_router(auth_router)
 app.include_router(scans_router)
 app.include_router(reports_router)
 app.include_router(stats_router)
+app.include_router(eval_router)
+app.include_router(feedback_router)
 
 
 @app.get("/health")
