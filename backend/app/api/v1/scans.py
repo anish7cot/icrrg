@@ -24,6 +24,7 @@ from app.git.diff_parser import parse_unified_diff
 from app.detection.regex_engine import scan_diff_for_secrets
 from app.detection.entropy import scan_diff_for_entropy
 from app.detection.ner_pipeline import scan_diff_for_phi
+from app.detection.sanitizer import sanitize_diff
 
 router = APIRouter(prefix="/api/v1/scans", tags=["scans"])
 
@@ -189,10 +190,11 @@ async def create_scan(
     await ensure_user_project(user.id, body.repository, session)
     await session.commit()
 
-    # 5. Queue async code review via Celery
+    # 5. Queue async code review via Celery (with sanitized diff)
+    sanitized = sanitize_diff(body.diff_text)
     try:
         from app.tasks.review_task import run_code_review_task
-        run_code_review_task.delay(str(scan.id), body.diff_text)
+        run_code_review_task.delay(str(scan.id), sanitized)
     except Exception:
         # If Celery/Redis is down, mark completed so UI doesn't hang
         scan.status = "completed"
