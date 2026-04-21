@@ -31,11 +31,11 @@ def _detect_repo_name(git_cmd: list[str]) -> str | None:
     # SSH: git@github.com:owner/repo.git
     m = re.match(r"git@[^:]+:(.+?)(\.git)?$", url)
     if m:
-        return m.group(1)
+        return m.group(1).rsplit("/", 1)[-1]
     # HTTPS: https://github.com/owner/repo.git
     m = re.match(r"https?://[^/]+/(.+?)(\.git)?$", url)
     if m:
-        return m.group(1)
+        return m.group(1).rsplit("/", 1)[-1]
     return None
 
 DEFAULT_API_URL = "http://localhost:8000"
