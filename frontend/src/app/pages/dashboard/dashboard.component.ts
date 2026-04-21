@@ -87,7 +87,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.scanService.listRepositories().subscribe({
-      next: (repos) => this.repositories = repos,
+      next: (repos) => {
+        this.repositories = repos;
+        // Auto-select when there's only one project
+        if (repos.length === 1) {
+          this.selectedRepo = repos[0];
+          this.onRepoChange();
+        }
+      },
       error: () => {},
     });
     this.loadStats();

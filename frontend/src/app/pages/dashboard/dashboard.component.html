@@ -16,7 +16,7 @@
     <mat-form-field appearance="outline" class="repo-select">
       <mat-label>Project</mat-label>
       <mat-select [(ngModel)]="selectedRepo" (selectionChange)="onRepoChange()">
-        <mat-option value="">All Projects</mat-option>
+        <mat-option *ngIf="repositories.length !== 1" value="">All Projects</mat-option>
         <mat-option *ngFor="let repo of repositories" [value]="repo">{{ repo }}</mat-option>
       </mat-select>
       <mat-icon matPrefix>folder</mat-icon>
