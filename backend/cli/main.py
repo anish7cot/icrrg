@@ -1,6 +1,7 @@
 """SecureDiff CLI — pre-commit hook installer and manual scanner."""
 
 import os
+import re
 import subprocess
 import sys
 
@@ -8,6 +9,34 @@ import click
 import httpx
 
 from cli.token_store import save_token, load_token, clear_token
+
+
+def _detect_repo_name(git_cmd: list[str]) -> str | None:
+    """Try to extract the repository name from the git remote URL.
+
+    Supports HTTPS and SSH remote formats:
+      https://github.com/owner/repo.git  → owner/repo
+      git@github.com:owner/repo.git      → owner/repo
+    """
+    result = subprocess.run(
+        [*git_cmd, "remote", "get-url", "origin"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        return None
+    url = result.stdout.strip()
+    # SSH: git@github.com:owner/repo.git
+    m = re.match(r"git@[^:]+:(.+?)(\.git)?$", url)
+    if m:
+        return m.group(1)
+    # HTTPS: https://github.com/owner/repo.git
+    m = re.match(r"https?://[^/]+/(.+?)(\.git)?$", url)
+    if m:
+        return m.group(1)
+    return None
 
 DEFAULT_API_URL = "http://localhost:8000"
 
@@ -123,11 +152,11 @@ from cli.scanner import submit_scan  # noqa: E402
 @cli.command()
 @click.option(
     "--repo-name",
-    default="cli-scan",
-    help="Repository name sent with the scan request.",
+    default=None,
+    help="Repository name sent with the scan request (auto-detected from git remote if omitted).",
 )
 @click.pass_context
-def scan(ctx: click.Context, repo_name: str) -> None:
+def scan(ctx: click.Context, repo_name: str | None) -> None:
     """Run a scan on the currently staged diff (git diff --cached)."""
     api_url = ctx.obj["api_url"]
 
@@ -145,6 +174,10 @@ def scan(ctx: click.Context, repo_name: str) -> None:
         errors="replace",
     )
     repo_root = root_result.stdout.strip() if root_result.returncode == 0 else None
+
+    # Auto-detect repo name from git remote if not explicitly provided
+    if repo_name is None:
+        repo_name = _detect_repo_name(git_cmd) or "cli-scan"
 
     # Get staged diff
     result = subprocess.run(
