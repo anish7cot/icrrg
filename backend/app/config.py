@@ -1,3 +1,5 @@
+import secrets
+
 from pydantic_settings import BaseSettings
 
 
@@ -10,7 +12,7 @@ class Settings(BaseSettings):
     OPENAI_BASE_URL: str = "https://openrouter.ai/api/v1"
     REVIEW_MODEL: str = "nvidia/nemotron-3-super-120b-a12b:free"
     LLM_PROVIDER: str = "openai"  # "openai" or "mock"
-    SECRET_KEY: str = "change-me"
+    SECRET_KEY: str = secrets.token_urlsafe(32)
     CORS_ORIGINS: list[str] = ["http://localhost:4200"]
 
     # --- Multilevel Reasoning ---
