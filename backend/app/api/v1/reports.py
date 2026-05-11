@@ -14,6 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
 from app.db.models.report import Report
+from app.db.models.user import User
+from app.api.deps import get_current_user, get_user_repos
 from app.reports.aggregator import AggregationResult, aggregate_scan_data
 
 router = APIRouter(prefix="/api/v1/reports", tags=["reports"])
@@ -65,8 +67,12 @@ class ReportListItem(BaseModel):
 @router.post("", response_model=ReportResponse, status_code=201)
 async def create_report(
     body: ReportRequest,
+    user: User = Depends(get_current_user),
+    repos: list[str] = Depends(get_user_repos),
     session: AsyncSession = Depends(get_session),
 ):
+    if repos and body.repository not in repos:
+        raise HTTPException(status_code=403, detail="Access denied for this repository")
     if body.date_range_start > body.date_range_end:
         raise HTTPException(
             status_code=422, detail="date_range_start must be <= date_range_end"
@@ -130,6 +136,8 @@ async def create_report(
 @router.get("/{report_id}", response_model=ReportResponse)
 async def get_report(
     report_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    repos: list[str] = Depends(get_user_repos),
     session: AsyncSession = Depends(get_session),
 ):
     stmt = select(Report).where(Report.id == report_id)
@@ -137,6 +145,8 @@ async def get_report(
     report = result.scalar_one_or_none()
     if report is None:
         raise HTTPException(status_code=404, detail="Report not found")
+    if repos and report.repository not in repos:
+        raise HTTPException(status_code=403, detail="Access denied for this repository")
 
     # Auto-complete reports stuck generating for more than 5 minutes
     if report.status == "generating" and report.created_at:
@@ -175,13 +185,13 @@ async def get_report(
 @router.get("", response_model=list[ReportListItem])
 async def list_reports(
     limit: int = 20,
+    user: User = Depends(get_current_user),
+    repos: list[str] = Depends(get_user_repos),
     session: AsyncSession = Depends(get_session),
 ):
-    stmt = (
-        select(Report)
-        .order_by(Report.created_at.desc())
-        .limit(min(limit, 100))
-    )
+    stmt = select(Report).order_by(Report.created_at.desc()).limit(min(limit, 100))
+    if repos:
+        stmt = stmt.where(Report.repository.in_(repos))
     result = await session.execute(stmt)
     reports = result.scalars().all()
     return reports
