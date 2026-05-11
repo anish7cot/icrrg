@@ -8,7 +8,7 @@
 
     <mat-card-content>
       <div class="error-msg" *ngIf="error">
-        <mat-icon>error_outline</mat-icon>
+        <mat-icon>{{ error.includes('locked') ? 'lock' : 'error_outline' }}</mat-icon>
         {{ error }}
       </div>
 
@@ -21,12 +21,33 @@
 
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Password</mat-label>
-          <input matInput [(ngModel)]="password" name="password" type="password" required autocomplete="current-password" />
+          <input matInput [(ngModel)]="password" name="password"
+                 [type]="showPassword ? 'text' : 'password'"
+                 required autocomplete="current-password"
+                 (input)="isRegister ? validatePassword() : null" />
           <mat-icon matPrefix>lock</mat-icon>
+          <button mat-icon-button matSuffix type="button" (click)="togglePassword()">
+            <mat-icon>{{ showPassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
         </mat-form-field>
 
+        <!-- Password strength indicator (register mode only) -->
+        <div *ngIf="isRegister && password.length > 0" class="password-strength">
+          <div class="strength-header">
+            <span class="strength-label">Password strength: <strong>{{ strengthLabel }}</strong></span>
+          </div>
+          <mat-progress-bar [mode]="'determinate'" [value]="passwordStrength * 20"
+                            [color]="strengthColor"></mat-progress-bar>
+          <ul class="strength-rules" *ngIf="passwordErrors.length > 0">
+            <li *ngFor="let err of passwordErrors">
+              <mat-icon class="rule-icon missing">close</mat-icon>
+              {{ err }}
+            </li>
+          </ul>
+        </div>
+
         <button mat-raised-button color="primary" type="submit" class="full-width submit-btn"
-                [disabled]="loading || !username.trim() || !password.trim()">
+                [disabled]="loading || !canSubmit">
           <mat-spinner diameter="20" *ngIf="loading"></mat-spinner>
           <span *ngIf="!loading">{{ isRegister ? 'Register' : 'Sign In' }}</span>
         </button>
