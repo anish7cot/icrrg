@@ -8,9 +8,11 @@ from app.db.models.eval_run import EvalRun
 from app.db.models.finding_feedback import FindingFeedback
 from app.db.models.scan_metrics import ScanMetrics
 from app.db.models.developer_score import DeveloperScore
+from app.db.models.policy import Policy
+from app.db.models.refresh_token import RefreshToken
 
 __all__ = [
     "Base", "Scan", "ScanFinding", "Report",
     "User", "UserProject", "EvalRun", "FindingFeedback",
-    "ScanMetrics", "DeveloperScore",
+    "ScanMetrics", "DeveloperScore", "Policy", "RefreshToken",
 ]
