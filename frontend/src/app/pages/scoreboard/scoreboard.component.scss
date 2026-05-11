@@ -20,6 +20,15 @@
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   margin-bottom: 24px;
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+
+    h2 { margin: 0; }
+  }
 }
 
 .score-cards {
@@ -194,4 +203,8 @@ table {
   padding: 24px;
   text-align: center;
   color: #999;
+
+  .calc-btn {
+    margin-top: 12px;
+  }
 }

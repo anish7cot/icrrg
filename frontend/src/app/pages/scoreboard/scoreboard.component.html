@@ -4,7 +4,12 @@
   <!-- My Score Card (visible to all users) -->
   @if (myScore(); as score) {
     <div class="my-score-section">
-      <h2>My Score</h2>
+      <div class="section-header">
+        <h2>My Score</h2>
+        <button class="calc-btn" (click)="recalculateMyScore()" [disabled]="calculating()">
+          {{ calculating() ? 'Calculating...' : 'Recalculate My Score' }}
+        </button>
+      </div>
       <div class="score-cards">
         <div class="score-card composite">
           <div class="score-value" [style.color]="getScoreColor(score.composite_score)">
@@ -53,6 +58,9 @@
   } @else {
     <div class="no-data">
       <p>No scores available yet. Scores are calculated weekly based on your scan activity.</p>
+      <button class="calc-btn" (click)="recalculateMyScore()" [disabled]="calculating()">
+        {{ calculating() ? 'Calculating...' : 'Calculate My Score' }}
+      </button>
     </div>
   }
 

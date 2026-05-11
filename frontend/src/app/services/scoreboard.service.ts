@@ -86,6 +86,12 @@ export class ScoreboardService {
     );
   }
 
+  triggerMyCalculation(): Observable<{ status: string; scores_computed: number }> {
+    return this.http.post<{ status: string; scores_computed: number }>(
+      `${this.baseUrl}/calculate-mine`, {}
+    );
+  }
+
   getMethodology(): Observable<MethodologyResponse> {
     return this.http.get<MethodologyResponse>(`${this.baseUrl}/methodology`);
   }

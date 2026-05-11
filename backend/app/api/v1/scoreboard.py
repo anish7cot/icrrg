@@ -216,6 +216,20 @@ async def trigger_calculation(
 
 
 # ---------------------------------------------------------------------------
+# POST /api/v1/scoreboard/calculate-mine — Any user trigger (own score only)
+# ---------------------------------------------------------------------------
+@router.post("/calculate-mine")
+async def trigger_my_calculation(
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+):
+    """Recalculate the current user's score for the current period."""
+    from app.scoring.job import calculate_scores_for_period
+    count = await calculate_scores_for_period(session)
+    return {"status": "completed", "scores_computed": count}
+
+
+# ---------------------------------------------------------------------------
 # GET /api/v1/scoreboard/methodology — Scoring documentation
 # ---------------------------------------------------------------------------
 @router.get("/methodology", response_model=MethodologyResponse)

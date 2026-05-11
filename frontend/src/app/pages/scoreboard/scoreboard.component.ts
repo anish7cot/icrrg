@@ -66,6 +66,17 @@ export class ScoreboardComponent implements OnInit {
     });
   }
 
+  recalculateMyScore(): void {
+    this.calculating.set(true);
+    this.scoreboard.triggerMyCalculation().subscribe({
+      next: () => {
+        this.calculating.set(false);
+        this.loadData();
+      },
+      error: () => this.calculating.set(false),
+    });
+  }
+
   getScoreColor(score: number): string {
     if (score >= 80) return '#4caf50';
     if (score >= 60) return '#ff9800';
