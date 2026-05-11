@@ -101,7 +101,7 @@ def _persist_findings_sync(scan_id: str, findings: list, pipeline_result) -> int
                 },
             )
 
-            # Persist scan metrics
+            # Update scan metrics (row already created by the API during scan)
             usage = pipeline_result.total_usage
             llm_cost = calculate_cost(
                 settings.REVIEW_MODEL,
@@ -115,19 +115,20 @@ def _persist_findings_sync(scan_id: str, findings: list, pipeline_result) -> int
 
             conn.execute(
                 text("""
-                    INSERT INTO scan_metrics
-                        (id, scan_id, total_time_ms, llm_time_ms, llm_input_tokens,
-                         llm_output_tokens, llm_cost_usd, llm_calls_count,
-                         reasoning_level, findings_after_dedup, estimated_savings_usd)
-                    VALUES
-                        (:id, :scan_id, :total_time_ms, :llm_time_ms, :llm_input_tokens,
-                         :llm_output_tokens, :llm_cost_usd, :llm_calls_count,
-                         :reasoning_level, :findings_after_dedup, :estimated_savings_usd)
+                    UPDATE scan_metrics
+                    SET llm_time_ms = :llm_time_ms,
+                        llm_input_tokens = :llm_input_tokens,
+                        llm_output_tokens = :llm_output_tokens,
+                        llm_cost_usd = :llm_cost_usd,
+                        llm_calls_count = :llm_calls_count,
+                        reasoning_level = :reasoning_level,
+                        findings_after_dedup = :findings_after_dedup,
+                        estimated_savings_usd = :estimated_savings_usd,
+                        total_time_ms = total_time_ms + :llm_time_ms
+                    WHERE scan_id = :scan_id
                 """),
                 {
-                    "id": uuid.uuid4(),
                     "scan_id": scan_uuid,
-                    "total_time_ms": pipeline_result.llm_total_duration_ms,
                     "llm_time_ms": pipeline_result.llm_total_duration_ms,
                     "llm_input_tokens": usage.prompt_tokens,
                     "llm_output_tokens": usage.completion_tokens,
