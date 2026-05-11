@@ -155,8 +155,13 @@ from cli.scanner import submit_scan  # noqa: E402
     default=None,
     help="Repository name sent with the scan request (auto-detected from git remote if omitted).",
 )
+@click.option(
+    "--wait/--no-wait",
+    default=None,
+    help="Wait for LLM review to complete before exiting. Default: wait for manual scans, skip for pre-commit hooks.",
+)
 @click.pass_context
-def scan(ctx: click.Context, repo_name: str | None) -> None:
+def scan(ctx: click.Context, repo_name: str | None, wait: bool | None) -> None:
     """Run a scan on the currently staged diff (git diff --cached)."""
     api_url = ctx.obj["api_url"]
 
@@ -164,6 +169,11 @@ def scan(ctx: click.Context, repo_name: str | None) -> None:
     # because the hook does `cd` to the backend dir for Python imports.
     repo_dir = os.environ.get("SECUREDIFF_REPO_DIR")
     git_cmd = ["git", "-C", repo_dir] if repo_dir else ["git"]
+
+    # Always wait for LLM review unless explicitly disabled — vulnerable code
+    # must not be committed before the AI review completes.
+    if wait is None:
+        wait = True
 
     # Discover the repo root so we can read .icrrg.yml
     root_result = subprocess.run(
@@ -196,7 +206,9 @@ def scan(ctx: click.Context, repo_name: str | None) -> None:
         click.secho("No staged changes found.", fg="yellow")
         sys.exit(0)
 
-    exit_code = submit_scan(api_url, diff_text, repo_name, repo_root=repo_root)
+    exit_code = submit_scan(
+        api_url, diff_text, repo_name, repo_root=repo_root, wait_for_llm=wait
+    )
     sys.exit(exit_code)
 
 
