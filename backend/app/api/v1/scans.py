@@ -4,6 +4,8 @@ GET  /api/v1/scans/{id} — retrieve a past scan with findings.
 
 from __future__ import annotations
 
+import hashlib
+import time
 import uuid
 from datetime import datetime, timezone
 
@@ -16,15 +18,19 @@ from sqlalchemy.orm import selectinload
 from app.db.session import get_session
 from app.db.models.scan import Scan
 from app.db.models.scan_finding import ScanFinding
+from app.db.models.scan_metrics import ScanMetrics
 
 from app.api.deps import get_current_user, get_user_repos, ensure_user_project
 from app.db.models.user import User
 
+from app.config import settings
 from app.git.diff_parser import parse_unified_diff
 from app.detection.regex_engine import scan_diff_for_secrets
 from app.detection.entropy import scan_diff_for_entropy
 from app.detection.ner_pipeline import scan_diff_for_phi
 from app.detection.sanitizer import sanitize_diff
+from app.review.dedup import deduplicate_findings
+from app.metrics.savings_calculator import calculate_scan_savings
 
 router = APIRouter(prefix="/api/v1/scans", tags=["scans"])
 
@@ -49,6 +55,7 @@ class ScanRequest(BaseModel):
     diff_text: str = Field(..., description="Raw unified diff text")
     repository: str = Field(default="manual-paste", description="Repository name or identifier")
     commit_hash: str | None = Field(default=None, description="Commit hash (optional)")
+    reasoning_level: int | None = Field(default=None, description="Override reasoning depth (1-4)")
 
 
 class FindingResponse(BaseModel):
@@ -59,6 +66,7 @@ class FindingResponse(BaseModel):
     file_path: str | None
     line_number: int | None
     confidence: float | None
+    reasoning: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -69,6 +77,8 @@ class ScanResponse(BaseModel):
     commit_hash: str | None
     status: str
     risk_score: float | None
+    reasoning_level: int = 1
+    synthesis_json: dict | None = None
     findings: list[FindingResponse]
     created_at: datetime
 
@@ -113,6 +123,34 @@ def _compute_risk_score(findings_data: list[dict]) -> float:
     return min(10.0, round(total, 2))
 
 
+async def _check_diff_cache(
+    session: AsyncSession, diff_hash: str, user: User
+) -> ScanResponse | None:
+    """Check if an identical diff was scanned in the last 24 hours.
+
+    Returns a ScanResponse if cache hit, None otherwise.
+    """
+    from datetime import timedelta
+
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    stmt = (
+        select(Scan)
+        .options(selectinload(Scan.findings))
+        .where(
+            Scan.diff_hash == diff_hash,
+            Scan.status == "completed",
+            Scan.created_at > cutoff,
+        )
+        .order_by(Scan.created_at.desc())
+        .limit(1)
+    )
+    result = await session.execute(stmt)
+    cached = result.scalar_one_or_none()
+    if cached is None:
+        return None
+    return cached
+
+
 # ---------------------------------------------------------------------------
 # POST /api/v1/scans
 # ---------------------------------------------------------------------------
@@ -123,17 +161,40 @@ async def create_scan(
     session: AsyncSession = Depends(get_session),
     user: User = Depends(get_current_user),
 ):
+    scan_start = time.perf_counter()
+
     # Size guard
     if len(body.diff_text.encode("utf-8")) > MAX_DIFF_SIZE:
         raise HTTPException(status_code=413, detail="Diff text exceeds 5 MB limit")
 
+    # Compute diff hash for caching
+    diff_hash = hashlib.sha256(body.diff_text.encode("utf-8")).hexdigest()
+
+    # Check cache — same diff scanned in last 24 hours?
+    cache_hit = False
+    cached_scan = await _check_diff_cache(session, diff_hash, user)
+    if cached_scan is not None:
+        cache_hit = True
+        return cached_scan
+
+    # Determine reasoning level
+    reasoning_level = body.reasoning_level if body.reasoning_level is not None else settings.REASONING_LEVEL
+
     # 1. Parse diff
     parsed_diff = parse_unified_diff(body.diff_text)
 
-    # 2. Run all detection engines
+    # 2. Run all detection engines with timing
+    t0 = time.perf_counter()
     secret_findings = scan_diff_for_secrets(parsed_diff)
+    regex_time_ms = int((time.perf_counter() - t0) * 1000)
+
+    t0 = time.perf_counter()
     entropy_findings = scan_diff_for_entropy(parsed_diff)
+    entropy_time_ms = int((time.perf_counter() - t0) * 1000)
+
+    t0 = time.perf_counter()
     phi_findings = scan_diff_for_phi(parsed_diff)
+    ner_time_ms = int((time.perf_counter() - t0) * 1000)
 
     # 3. Normalise into a flat list of dicts for DB storage
     all_findings: list[dict] = []
@@ -168,6 +229,11 @@ async def create_scan(
             "confidence": f.confidence,
         })
 
+    # Deduplication
+    findings_before_dedup = len(all_findings)
+    all_findings = deduplicate_findings(all_findings)
+    findings_after_dedup = len(all_findings)
+
     risk_score = _compute_risk_score(all_findings)
 
     # 4. Persist scan + findings (status = "reviewing" while LLM runs)
@@ -176,12 +242,29 @@ async def create_scan(
         commit_hash=body.commit_hash,
         status="reviewing",
         risk_score=risk_score,
+        diff_hash=diff_hash,
+        reasoning_level=reasoning_level,
     )
     session.add(scan)
     await session.flush()  # get scan.id
 
     for fd in all_findings:
         session.add(ScanFinding(scan_id=scan.id, **fd))
+
+    # Persist initial timing metrics
+    total_time_ms = int((time.perf_counter() - scan_start) * 1000)
+    estimated_savings = calculate_scan_savings(all_findings)
+    session.add(ScanMetrics(
+        scan_id=scan.id,
+        total_time_ms=total_time_ms,
+        regex_time_ms=regex_time_ms,
+        entropy_time_ms=entropy_time_ms,
+        ner_time_ms=ner_time_ms,
+        reasoning_level=reasoning_level,
+        findings_before_dedup=findings_before_dedup,
+        findings_after_dedup=findings_after_dedup,
+        estimated_savings_usd=estimated_savings,
+    ))
 
     await session.commit()
     await session.refresh(scan, attribute_names=["findings"])
@@ -194,7 +277,7 @@ async def create_scan(
     sanitized = sanitize_diff(body.diff_text)
     try:
         from app.tasks.review_task import run_code_review_task
-        run_code_review_task.delay(str(scan.id), sanitized)
+        run_code_review_task.delay(str(scan.id), sanitized, reasoning_level)
     except Exception:
         # If Celery/Redis is down, mark completed so UI doesn't hang
         scan.status = "completed"

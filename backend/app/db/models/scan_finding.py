@@ -19,5 +19,6 @@ class ScanFinding(TimestampMixin, Base):
     file_path: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     line_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     scan = relationship("Scan", back_populates="findings")

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import re
 
-from .base import BaseLLMProvider, ReviewFinding
+from .base import BaseLLMProvider, LLMResponse, ReviewFinding, TokenUsage
 
 # Pre-loaded impressive responses keyed by simple heuristics.
 _CANNED: dict[str, list[ReviewFinding]] = {
@@ -89,3 +90,40 @@ class MockProvider(BaseLLMProvider):
                 seen.add(key)
 
         return findings
+
+    async def chat(self, messages: list[dict], temperature: float = 0) -> LLMResponse:
+        """Mock chat that returns canned correlation/synthesis responses."""
+        # Detect what type of call based on system message content
+        system_content = messages[0].get("content", "") if messages else ""
+
+        if "threat modeling" in system_content.lower() or "attack chain" in system_content.lower():
+            # Level 3: Correlation mock
+            content = json.dumps([{
+                "chain_id": 1,
+                "finding_refs": [0, 1],
+                "combined_severity": "critical",
+                "attack_narrative": "Combined vulnerabilities create an exploitable attack chain.",
+                "compounded_risk": "An attacker could chain these findings to escalate from information disclosure to full system compromise."
+            }])
+        elif "remediation roadmap" in system_content.lower() or "principal security" in system_content.lower():
+            # Level 4: Synthesis mock
+            content = json.dumps({
+                "overall_risk_rating": "high",
+                "executive_summary": "The codebase contains multiple security findings that require immediate attention.",
+                "remediation_priority": [{
+                    "priority": 1,
+                    "finding_refs": [0],
+                    "action": "Fix critical vulnerability immediately",
+                    "effort": "low",
+                    "impact": "high"
+                }],
+                "architectural_recommendations": [
+                    "Implement input validation layer",
+                    "Add secrets management solution"
+                ]
+            })
+        else:
+            content = "[]"
+
+        mock_usage = TokenUsage(prompt_tokens=150, completion_tokens=80, total_tokens=230)
+        return LLMResponse(findings=[], usage=mock_usage, model="mock", duration_ms=50)

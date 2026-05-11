@@ -13,12 +13,13 @@ from app.review.response_parser import (
 )
 from app.review.service import (
     CodeReviewFinding,
+    ReviewPipelineResult,
     run_code_review,
     _chunk_diff,
     _build_valid_lines,
 )
 from app.git.diff_parser import parse_unified_diff
-from app.llm.base import ReviewFinding as LLMReviewFinding
+from app.llm.base import ReviewFinding as LLMReviewFinding, LLMResponse, TokenUsage
 
 
 # ===================================================================
@@ -178,10 +179,14 @@ class TestRunCodeReview:
     @patch("app.review.service.get_provider")
     def test_returns_unified_findings(self, mock_get_provider):
         mock_provider = AsyncMock()
-        mock_provider.review.return_value = [MOCK_LLM_FINDING]
+        mock_provider.chat.return_value = LLMResponse(
+            findings=[MOCK_LLM_FINDING], usage=TokenUsage(), duration_ms=100
+        )
         mock_get_provider.return_value = mock_provider
 
-        findings = self._run(run_code_review(SAMPLE_DIFF))
+        result = self._run(run_code_review(SAMPLE_DIFF))
+        assert isinstance(result, ReviewPipelineResult)
+        findings = result.findings
         assert len(findings) == 1
         f = findings[0]
         assert isinstance(f, CodeReviewFinding)
@@ -199,28 +204,34 @@ class TestRunCodeReview:
             line=999, issue="x", explanation="x", suggestion="x",
         )
         mock_provider = AsyncMock()
-        mock_provider.review.return_value = [bad_line]
+        mock_provider.chat.return_value = LLMResponse(
+            findings=[bad_line], usage=TokenUsage(), duration_ms=50
+        )
         mock_get_provider.return_value = mock_provider
 
-        findings = self._run(run_code_review(SAMPLE_DIFF))
+        result = self._run(run_code_review(SAMPLE_DIFF))
+        findings = result.findings
         assert len(findings) == 1
         assert findings[0].approximate_line is True
         assert findings[0].confidence == 0.60
 
     @patch("app.review.service.get_provider")
     def test_empty_diff_returns_empty(self, mock_get_provider):
-        findings = self._run(run_code_review(""))
-        assert findings == []
+        result = self._run(run_code_review(""))
+        assert isinstance(result, ReviewPipelineResult)
+        assert result.findings == []
         mock_get_provider.assert_not_called()
 
     @patch("app.review.service.get_provider")
     def test_llm_returns_no_findings(self, mock_get_provider):
         mock_provider = AsyncMock()
-        mock_provider.review.return_value = []
+        mock_provider.chat.return_value = LLMResponse(
+            findings=[], usage=TokenUsage(), duration_ms=50
+        )
         mock_get_provider.return_value = mock_provider
 
-        findings = self._run(run_code_review(SAMPLE_DIFF))
-        assert findings == []
+        result = self._run(run_code_review(SAMPLE_DIFF))
+        assert result.findings == []
 
     @patch("app.review.service.get_provider")
     def test_multiple_chunks(self, mock_get_provider):
@@ -243,8 +254,8 @@ class TestRunCodeReview:
         mock_provider.review.side_effect = [[finding_a], [finding_b]]
         mock_get_provider.return_value = mock_provider
 
-        findings = self._run(run_code_review(big_diff))
-        assert len(findings) == 2
+        result = self._run(run_code_review(big_diff))
+        assert len(result.findings) == 2
         assert mock_provider.review.await_count == 2
 
     @patch("app.review.service.get_provider")
@@ -255,9 +266,11 @@ class TestRunCodeReview:
         )
         good = MOCK_LLM_FINDING
         mock_provider = AsyncMock()
-        mock_provider.review.return_value = [bad, good]
+        mock_provider.chat.return_value = LLMResponse(
+            findings=[bad, good], usage=TokenUsage(), duration_ms=50
+        )
         mock_get_provider.return_value = mock_provider
 
-        findings = self._run(run_code_review(SAMPLE_DIFF))
-        assert len(findings) == 1
-        assert findings[0].severity == "critical"
+        result = self._run(run_code_review(SAMPLE_DIFF))
+        assert len(result.findings) == 1
+        assert result.findings[0].severity == "critical"

@@ -48,6 +48,7 @@ class ReviewFindingModel(BaseModel):
     issue: str
     explanation: str
     suggestion: str
+    reasoning: str = ""  # Chain-of-thought reasoning (Level 2+)
     approximate_line: bool = False  # set True if line couldn't be validated
 
     @field_validator("severity", mode="before")

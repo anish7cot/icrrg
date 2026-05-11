@@ -14,14 +14,14 @@ async def main():
             await s.execute(
                 update(User)
                 .where(User.username == "admin")
-                .values(hashed_password=hash_password("Admin@123"))
+                .values(hashed_password=hash_password("Admin@123"), role="admin")
             )
             await s.commit()
-            print("admin password updated to Admin@123")
+            print("admin password updated to Admin@123, role set to admin")
         else:
-            s.add(User(username="admin", hashed_password=hash_password("Admin@123")))
+            s.add(User(username="admin", hashed_password=hash_password("Admin@123"), role="admin"))
             await s.commit()
-            print("admin user created with password Admin@123")
+            print("admin user created with password Admin@123, role=admin")
 
 
 asyncio.run(main())

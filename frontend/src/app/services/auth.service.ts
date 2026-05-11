@@ -6,15 +6,18 @@ export interface AuthResponse {
   access_token: string;
   token_type: string;
   username: string;
+  role: string;
 }
 
 export interface UserInfo {
   username: string;
   is_active: boolean;
+  role: string;
 }
 
 const TOKEN_KEY = 'icrrg_token';
 const USER_KEY = 'icrrg_user';
+const ROLE_KEY = 'icrrg_role';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -22,9 +25,11 @@ export class AuthService {
 
   private loggedIn$ = new BehaviorSubject<boolean>(this.hasToken());
   private username$ = new BehaviorSubject<string>(this.storedUsername());
+  private role$ = new BehaviorSubject<string>(this.storedRole());
 
   isLoggedIn$ = this.loggedIn$.asObservable();
   currentUsername$ = this.username$.asObservable();
+  currentRole$ = this.role$.asObservable();
 
   constructor(private http: HttpClient) {}
 
@@ -43,12 +48,26 @@ export class AuthService {
   logout(): void {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(ROLE_KEY);
     this.loggedIn$.next(false);
     this.username$.next('');
+    this.role$.next('');
   }
 
   getToken(): string | null {
     return localStorage.getItem(TOKEN_KEY);
+  }
+
+  getRole(): string {
+    return localStorage.getItem(ROLE_KEY) || 'developer';
+  }
+
+  isAdmin(): boolean {
+    return this.getRole() === 'admin';
+  }
+
+  isManagerOrAdmin(): boolean {
+    return ['admin', 'manager'].includes(this.getRole());
   }
 
   isLoggedIn(): boolean {
@@ -63,10 +82,16 @@ export class AuthService {
     return localStorage.getItem(USER_KEY) || '';
   }
 
+  private storedRole(): string {
+    return localStorage.getItem(ROLE_KEY) || '';
+  }
+
   private saveSession(res: AuthResponse): void {
     localStorage.setItem(TOKEN_KEY, res.access_token);
     localStorage.setItem(USER_KEY, res.username);
+    localStorage.setItem(ROLE_KEY, res.role || 'developer');
     this.loggedIn$.next(true);
     this.username$.next(res.username);
+    this.role$.next(res.role || 'developer');
   }
 }

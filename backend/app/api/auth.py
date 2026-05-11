@@ -21,16 +21,19 @@ def verify_password(plain: str, hashed: str) -> bool:
     return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
-def create_access_token(subject: str) -> str:
+def create_access_token(subject: str, role: str = "developer") -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    payload = {"sub": subject, "exp": expire}
+    payload = {"sub": subject, "role": role, "exp": expire}
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
 
 
-def decode_access_token(token: str) -> str | None:
-    """Return the username (sub) or None if invalid/expired."""
+def decode_access_token(token: str) -> dict | None:
+    """Return {username, role} dict or None if invalid/expired."""
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
-        return payload.get("sub")
+        sub = payload.get("sub")
+        if sub is None:
+            return None
+        return {"username": sub, "role": payload.get("role", "developer")}
     except JWTError:
         return None

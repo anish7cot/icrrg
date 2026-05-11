@@ -22,14 +22,14 @@ class BlockingPolicy:
     Defaults (when no .icrrg.yml exists):
       critical → block
       high     → block
-      medium   → warn
-      low      → info
+      medium   → block
+      low      → block
     """
 
     critical: Action = "block"
     high: Action = "block"
-    medium: Action = "warn"
-    low: Action = "info"
+    medium: Action = "block"
+    low: Action = "block"
 
     def action_for(self, severity: str) -> Action:
         """Return the configured action for the given severity string."""

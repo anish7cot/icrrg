@@ -1,0 +1,172 @@
+<div class="scoreboard-container">
+  <h1>Developer Scoreboard</h1>
+
+  <!-- My Score Card (visible to all users) -->
+  @if (myScore(); as score) {
+    <div class="my-score-section">
+      <h2>My Score</h2>
+      <div class="score-cards">
+        <div class="score-card composite">
+          <div class="score-value" [style.color]="getScoreColor(score.composite_score)">
+            {{ score.composite_score | number:'1.0-0' }}
+          </div>
+          <div class="score-label">Composite Score</div>
+          <div class="percentile">Top {{ score.percentile }}%</div>
+        </div>
+
+        <div class="score-card">
+          <div class="score-value" [style.color]="getScoreColor(score.security_score)">
+            {{ score.security_score | number:'1.0-0' }}
+          </div>
+          <div class="score-label">Security (40%)</div>
+          <div class="score-detail">Clean scan rate: {{ score.clean_scan_rate * 100 | number:'1.0-0' }}%</div>
+        </div>
+
+        <div class="score-card">
+          <div class="score-value" [style.color]="getScoreColor(score.responsiveness_score)">
+            {{ score.responsiveness_score | number:'1.0-0' }}
+          </div>
+          <div class="score-label">Responsiveness (30%)</div>
+          <div class="score-detail">Feedback rate: {{ score.feedback_rate * 100 | number:'1.0-0' }}%</div>
+        </div>
+
+        <div class="score-card">
+          <div class="score-value" [style.color]="getScoreColor(score.improvement_score)">
+            {{ score.improvement_score | number:'1.0-0' }}
+          </div>
+          <div class="score-label">Improvement (30%)</div>
+          <div class="score-detail">Trend: {{ getTrendArrow(score.improvement_rate) }} {{ score.improvement_rate | number:'1.0-1' }}%</div>
+        </div>
+      </div>
+
+      <div class="stats-row">
+        <span>Total Scans: {{ score.total_scans }}</span>
+        <span>Total Findings: {{ score.total_findings }}</span>
+        <span>Findings/Scan: {{ score.findings_per_scan | number:'1.1-1' }}</span>
+        <span>Rank: {{ getRankBadge(score.rank) }}</span>
+      </div>
+
+      <div class="improvement-tip">
+        <strong>Tip:</strong> {{ getImprovementTip() }}
+      </div>
+    </div>
+  } @else {
+    <div class="no-data">
+      <p>No scores available yet. Scores are calculated weekly based on your scan activity.</p>
+    </div>
+  }
+
+  <!-- Score History -->
+  @if (history().length > 0) {
+    <div class="history-section">
+      <h2>Score History (Last 8 Weeks)</h2>
+      <div class="history-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Period</th>
+              <th>Composite</th>
+              <th>Security</th>
+              <th>Responsiveness</th>
+              <th>Improvement</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of history(); track entry.period_start) {
+              <tr>
+                <td>{{ entry.period_start }}</td>
+                <td [style.color]="getScoreColor(entry.composite_score)">{{ entry.composite_score | number:'1.0-0' }}</td>
+                <td>{{ entry.security_score | number:'1.0-0' }}</td>
+                <td>{{ entry.responsiveness_score | number:'1.0-0' }}</td>
+                <td>{{ entry.improvement_score | number:'1.0-0' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+
+  <!-- Leaderboard (admin/manager only) -->
+  @if (isManagerOrAdmin()) {
+    <div class="leaderboard-section">
+      <div class="section-header">
+        <h2>Team Leaderboard</h2>
+        <button class="calc-btn" (click)="triggerCalculation()" [disabled]="calculating()">
+          {{ calculating() ? 'Calculating...' : 'Recalculate Scores' }}
+        </button>
+      </div>
+
+      @if (leaderboard().length > 0) {
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Developer</th>
+              <th>Composite</th>
+              <th>Security</th>
+              <th>Responsiveness</th>
+              <th>Improvement</th>
+              <th>Scans</th>
+              <th>Clean Rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (entry of leaderboard(); track entry.username) {
+              <tr [class.top-3]="entry.rank <= 3">
+                <td class="rank">{{ getRankBadge(entry.rank) }}</td>
+                <td>{{ entry.username }}</td>
+                <td [style.color]="getScoreColor(entry.composite_score)">
+                  <strong>{{ entry.composite_score | number:'1.0-0' }}</strong>
+                </td>
+                <td>{{ entry.security_score | number:'1.0-0' }}</td>
+                <td>{{ entry.responsiveness_score | number:'1.0-0' }}</td>
+                <td>{{ entry.improvement_score | number:'1.0-0' }}</td>
+                <td>{{ entry.total_scans }}</td>
+                <td>{{ entry.clean_scan_rate * 100 | number:'1.0-0' }}%</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="no-data">No scores computed yet. Click "Recalculate Scores" to generate the leaderboard.</p>
+      }
+    </div>
+  }
+
+  <!-- Methodology -->
+  @if (methodology(); as m) {
+    <div class="methodology-section">
+      <h2>Scoring Methodology</h2>
+      <p>{{ m.description }}</p>
+
+      <h3>Sub-Scores</h3>
+      <div class="methodology-cards">
+        @for (sub of m.sub_scores; track sub.name) {
+          <div class="method-card">
+            <h4>{{ sub.name }} ({{ sub.weight }})</h4>
+            <p>{{ sub.description }}</p>
+            <code>{{ sub.formula }}</code>
+            <small>Range: {{ sub.range }}</small>
+          </div>
+        }
+      </div>
+
+      <h3>Scientific Basis</h3>
+      <table class="basis-table">
+        <thead>
+          <tr><th>Metric</th><th>Standard</th><th>Reference</th></tr>
+        </thead>
+        <tbody>
+          @for (basis of m.scientific_basis; track basis.metric) {
+            <tr>
+              <td>{{ basis.metric }}</td>
+              <td>{{ basis.standard }}</td>
+              <td>{{ basis.reference }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

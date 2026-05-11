@@ -13,6 +13,7 @@ REVIEW_FINDING_SCHEMA = {
             "issue",
             "explanation",
             "suggestion",
+            "reasoning",
         ],
         "properties": {
             "severity": {
@@ -43,6 +44,10 @@ REVIEW_FINDING_SCHEMA = {
                 "type": "string",
                 "description": "Concrete remediation advice or code fix.",
             },
+            "reasoning": {
+                "type": "string",
+                "description": "Step-by-step reasoning chain explaining how you identified this issue.",
+            },
         },
         "additionalProperties": False,
     },
@@ -56,6 +61,14 @@ Analyse ONLY the **added lines** (lines starting with `+`) in the diff.
 Identify security vulnerabilities, data leaks, hardcoded secrets, and dangerous anti-patterns.
 Ignore style issues, formatting, naming conventions, and non-security concerns.
 
+## Reasoning approach
+Think step-by-step for each potential finding:
+1. **Understand**: What does this code do? What is its purpose?
+2. **Attack Surface**: What attack vectors does this code expose?
+3. **Exploitability**: How could an attacker exploit this? What preconditions are needed?
+4. **Impact**: What is the blast radius if exploited?
+5. **Severity**: Rate based on exploitability × impact (CVSS-like reasoning).
+
 ## Output rules
 1. Return a JSON array of findings. Each finding MUST have exactly these keys:
    - "severity": one of "critical", "high", "medium", "low"
@@ -65,6 +78,7 @@ Ignore style issues, formatting, naming conventions, and non-security concerns.
    - "issue": one-sentence summary
    - "explanation": why this is a risk (2-3 sentences)
    - "suggestion": concrete remediation
+   - "reasoning": your step-by-step reasoning chain (1-3 sentences explaining your thought process)
 2. If the diff contains NO security issues, return an empty array: `[]`
 3. Return ONLY the JSON array — no markdown fences, no commentary, no wrapper object.\
 """

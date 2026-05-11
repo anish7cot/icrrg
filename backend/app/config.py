@@ -13,6 +13,12 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me"
     CORS_ORIGINS: list[str] = ["http://localhost:4200"]
 
+    # --- Multilevel Reasoning ---
+    REASONING_LEVEL: int = 2  # 1=rules only, 2=LLM+CoT, 3=+correlation, 4=+synthesis
+
+    # --- Cost Metrics ---
+    BASE_FINDING_COST_USD: float = 50.0  # Developer-hour equivalent per finding
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 

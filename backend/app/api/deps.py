@@ -21,9 +21,10 @@ async def get_current_user(
 ) -> User:
     if creds is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
-    username = decode_access_token(creds.credentials)
-    if username is None:
+    token_data = decode_access_token(creds.credentials)
+    if token_data is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+    username = token_data["username"]
     result = await session.execute(select(User).where(User.username == username, User.is_active == True))  # noqa: E712
     user = result.scalar_one_or_none()
     if user is None:
@@ -39,11 +40,30 @@ async def optional_user(
     that work both authenticated and unauthenticated (e.g. the scan POST from CLI)."""
     if creds is None:
         return None
-    username = decode_access_token(creds.credentials)
-    if username is None:
+    token_data = decode_access_token(creds.credentials)
+    if token_data is None:
         return None
+    username = token_data["username"]
     result = await session.execute(select(User).where(User.username == username, User.is_active == True))  # noqa: E712
     return result.scalar_one_or_none()
+
+
+async def require_admin(
+    user: User = Depends(get_current_user),
+) -> User:
+    """Dependency that requires the user to have admin role."""
+    if user.role != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    return user
+
+
+async def require_manager_or_admin(
+    user: User = Depends(get_current_user),
+) -> User:
+    """Dependency that requires manager or admin role."""
+    if user.role not in ("admin", "manager"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Manager or admin access required")
+    return user
 
 
 async def get_user_repos(

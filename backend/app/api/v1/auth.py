@@ -32,11 +32,13 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     username: str
+    role: str = "developer"
 
 
 class UserResponse(BaseModel):
     username: str
     is_active: bool
+    role: str
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
@@ -49,8 +51,8 @@ async def register(body: RegisterRequest, session: AsyncSession = Depends(get_se
     session.add(user)
     await session.commit()
 
-    token = create_access_token(user.username)
-    return TokenResponse(access_token=token, username=user.username)
+    token = create_access_token(user.username, user.role)
+    return TokenResponse(access_token=token, username=user.username, role=user.role)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -62,10 +64,10 @@ async def login(body: LoginRequest, session: AsyncSession = Depends(get_session)
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account disabled")
 
-    token = create_access_token(user.username)
-    return TokenResponse(access_token=token, username=user.username)
+    token = create_access_token(user.username, user.role)
+    return TokenResponse(access_token=token, username=user.username, role=user.role)
 
 
 @router.get("/me", response_model=UserResponse)
 async def me(user: User = Depends(get_current_user)):
-    return UserResponse(username=user.username, is_active=user.is_active)
+    return UserResponse(username=user.username, is_active=user.is_active, role=user.role)
