@@ -1,8 +1,9 @@
 """FindingFeedback model — user verdicts on individual scan findings."""
 
 import uuid
+from datetime import datetime
 
-from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -26,6 +27,9 @@ class FindingFeedback(TimestampMixin, Base):
         String(20), nullable=False
     )  # "true_positive", "false_positive", "disputed"
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     finding = relationship("ScanFinding")
     user = relationship("User")

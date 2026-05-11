@@ -25,6 +25,7 @@ def _persist_findings_sync(scan_id: str, findings: list, pipeline_result) -> int
     """Persist LLM findings, metrics, and mark scan completed using sync DB operations."""
     from app.llm.pricing import calculate_cost
     from app.metrics.savings_calculator import calculate_scan_savings
+    from app.detection.cwe_mapping import lookup_cwe
 
     engine = create_engine(_sync_db_url())
     try:
@@ -48,23 +49,33 @@ def _persist_findings_sync(scan_id: str, findings: list, pipeline_result) -> int
 
             # Insert findings
             for f in findings:
+                finding_type = f.rule_name
+                severity = f.severity
+                cwe = lookup_cwe(finding_type, severity)
                 conn.execute(
                     text("""
                         INSERT INTO scan_findings
-                            (id, scan_id, finding_type, severity, message, file_path, line_number, confidence, reasoning)
+                            (id, scan_id, finding_type, severity, message, file_path,
+                             line_number, confidence, reasoning,
+                             cwe_id, cvss_score, cvss_vector, status)
                         VALUES
-                            (:id, :scan_id, :finding_type, :severity, :message, :file_path, :line_number, :confidence, :reasoning)
+                            (:id, :scan_id, :finding_type, :severity, :message, :file_path,
+                             :line_number, :confidence, :reasoning,
+                             :cwe_id, :cvss_score, :cvss_vector, 'new')
                     """),
                     {
                         "id": uuid.uuid4(),
                         "scan_id": scan_uuid,
-                        "finding_type": f.rule_name,
-                        "severity": f.severity,
+                        "finding_type": finding_type,
+                        "severity": severity,
                         "message": f"{f.description} — {f.suggestion}",
                         "file_path": f.file_path,
                         "line_number": f.line_number,
                         "confidence": f.confidence,
                         "reasoning": f.reasoning or None,
+                        "cwe_id": cwe.cwe_id,
+                        "cvss_score": cwe.cvss_score,
+                        "cvss_vector": cwe.cvss_vector,
                     },
                 )
 

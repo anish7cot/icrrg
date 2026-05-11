@@ -8,6 +8,7 @@ GET  /api/v1/feedback/accuracy — real-world precision from user verdicts
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -31,6 +32,7 @@ router = APIRouter(prefix="/api/v1/findings", tags=["feedback"])
 class FeedbackRequest(BaseModel):
     verdict: str  # "true_positive", "false_positive", "disputed"
     comment: str | None = None
+    expires_at: datetime | None = None  # optional expiration for false_positive suppression
 
 
 class FeedbackResponse(BaseModel):
@@ -39,6 +41,7 @@ class FeedbackResponse(BaseModel):
     user_id: uuid.UUID
     verdict: str
     comment: str | None
+    expires_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
@@ -83,6 +86,7 @@ async def submit_feedback(
     if existing:
         existing.verdict = body.verdict
         existing.comment = body.comment
+        existing.expires_at = body.expires_at
         await session.commit()
         await session.refresh(existing)
         return existing
@@ -92,6 +96,7 @@ async def submit_feedback(
         user_id=user.id,
         verdict=body.verdict,
         comment=body.comment,
+        expires_at=body.expires_at,
     )
     session.add(fb)
     await session.commit()
@@ -204,4 +209,82 @@ async def scan_accuracy(
         disputed=disputed,
         precision=round(precision, 4),
         review_coverage=round(coverage, 4),
+    )
+
+
+# ---------------------------------------------------------------------------
+# PATCH /api/v1/findings/{id}/status — finding lifecycle transitions
+# ---------------------------------------------------------------------------
+
+_VALID_STATUSES = {"new", "confirmed", "in_progress", "resolved", "closed"}
+_VALID_TRANSITIONS: dict[str, set[str]] = {
+    "new": {"confirmed", "closed"},
+    "confirmed": {"in_progress", "closed"},
+    "in_progress": {"resolved", "closed"},
+    "resolved": {"closed", "in_progress"},  # can reopen
+    "closed": {"new"},  # can reopen
+}
+
+
+class StatusUpdateRequest(BaseModel):
+    status: str
+    assigned_to: uuid.UUID | None = None
+
+
+class FindingStatusResponse(BaseModel):
+    id: uuid.UUID
+    status: str
+    assigned_to: uuid.UUID | None
+    resolved_at: datetime | None
+    sla_deadline: datetime | None
+
+    model_config = {"from_attributes": True}
+
+
+@router.patch("/{finding_id}/status", response_model=FindingStatusResponse)
+async def update_finding_status(
+    finding_id: uuid.UUID,
+    body: StatusUpdateRequest,
+    session: AsyncSession = Depends(get_session),
+    user: User = Depends(get_current_user),
+):
+    """Transition a finding through its lifecycle."""
+    if body.status not in _VALID_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"status must be one of {_VALID_STATUSES}",
+        )
+
+    finding = await session.get(ScanFinding, finding_id)
+    if not finding:
+        raise HTTPException(status_code=404, detail="Finding not found")
+
+    current = finding.status or "new"
+    allowed = _VALID_TRANSITIONS.get(current, set())
+    if body.status not in allowed:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot transition from '{current}' to '{body.status}'. Allowed: {allowed}",
+        )
+
+    finding.status = body.status
+
+    if body.assigned_to is not None:
+        finding.assigned_to = body.assigned_to
+
+    if body.status == "resolved":
+        from datetime import timezone
+        finding.resolved_at = datetime.now(timezone.utc)
+    elif body.status in ("new", "in_progress"):
+        finding.resolved_at = None
+
+    await session.commit()
+    await session.refresh(finding)
+
+    return FindingStatusResponse(
+        id=finding.id,
+        status=finding.status,
+        assigned_to=finding.assigned_to,
+        resolved_at=finding.resolved_at,
+        sla_deadline=finding.sla_deadline,
     )

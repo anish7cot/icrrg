@@ -13,6 +13,8 @@ from app.api.v1.eval import router as eval_router
 from app.api.v1.feedback import router as feedback_router
 from app.api.v1.metrics import router as metrics_router
 from app.api.v1.scoreboard import router as scoreboard_router
+from app.api.v1.sarif import router as sarif_router
+from app.api.v1.policies import router as policies_router
 
 app = FastAPI(title=settings.APP_NAME)
 
@@ -32,6 +34,8 @@ app.include_router(eval_router)
 app.include_router(feedback_router)
 app.include_router(metrics_router)
 app.include_router(scoreboard_router)
+app.include_router(sarif_router)
+app.include_router(policies_router)
 
 
 @app.get("/health")

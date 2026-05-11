@@ -28,7 +28,9 @@ from app.git.diff_parser import parse_unified_diff
 from app.detection.regex_engine import scan_diff_for_secrets
 from app.detection.entropy import scan_diff_for_entropy
 from app.detection.ner_pipeline import scan_diff_for_phi
+from app.detection.sca_engine import scan_diff_for_sca
 from app.detection.sanitizer import sanitize_diff
+from app.detection.cwe_mapping import enrich_finding
 from app.review.dedup import deduplicate_findings
 from app.metrics.savings_calculator import calculate_scan_savings
 
@@ -67,8 +69,22 @@ class FindingResponse(BaseModel):
     line_number: int | None
     confidence: float | None
     reasoning: str | None = None
+    cwe_id: str | None = None
+    cvss_score: float | None = None
+    cvss_vector: str | None = None
+    status: str = "new"
+    assigned_to: uuid.UUID | None = None
+    resolved_at: datetime | None = None
+    sla_deadline: datetime | None = None
+    suppressed: bool = False
 
     model_config = {"from_attributes": True}
+
+
+class PolicyCheckResult(BaseModel):
+    blocked: bool = False
+    violations_count: int = 0
+    max_severity_allowed: str | None = None
 
 
 class ScanResponse(BaseModel):
@@ -80,6 +96,7 @@ class ScanResponse(BaseModel):
     reasoning_level: int = 1
     synthesis_json: dict | None = None
     findings: list[FindingResponse]
+    policy_check: PolicyCheckResult | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -149,6 +166,67 @@ async def _check_diff_cache(
     if cached is None:
         return None
     return cached
+
+
+# ---------------------------------------------------------------------------
+# Helper — annotate findings with false-positive suppression status
+# ---------------------------------------------------------------------------
+async def _annotate_findings_suppression(
+    session: AsyncSession, findings: list
+) -> list[FindingResponse]:
+    """Convert ORM findings to FindingResponse, marking suppressed ones."""
+    from app.db.models.finding_feedback import FindingFeedback
+
+    if not findings:
+        return []
+
+    finding_ids = [f.id for f in findings]
+    now = datetime.now(timezone.utc)
+
+    # Fetch active false_positive verdicts (not expired)
+    stmt = select(FindingFeedback.scan_finding_id).where(
+        FindingFeedback.scan_finding_id.in_(finding_ids),
+        FindingFeedback.verdict == "false_positive",
+    )
+    result = await session.execute(stmt)
+    suppressed_ids: set[uuid.UUID] = set()
+    for row in result.all():
+        suppressed_ids.add(row[0])
+
+    # Check expiration: remove from suppressed if expired
+    if suppressed_ids:
+        expired_stmt = select(FindingFeedback.scan_finding_id).where(
+            FindingFeedback.scan_finding_id.in_(suppressed_ids),
+            FindingFeedback.verdict == "false_positive",
+            FindingFeedback.expires_at.is_not(None),
+            FindingFeedback.expires_at < now,
+        )
+        expired_result = await session.execute(expired_stmt)
+        expired_ids = {row[0] for row in expired_result.all()}
+        suppressed_ids -= expired_ids
+
+    responses = []
+    for f in findings:
+        resp = FindingResponse(
+            id=f.id,
+            finding_type=f.finding_type,
+            severity=f.severity,
+            message=f.message,
+            file_path=f.file_path,
+            line_number=f.line_number,
+            confidence=f.confidence,
+            reasoning=f.reasoning,
+            cwe_id=f.cwe_id,
+            cvss_score=f.cvss_score,
+            cvss_vector=f.cvss_vector,
+            status=f.status,
+            assigned_to=f.assigned_to,
+            resolved_at=f.resolved_at,
+            sla_deadline=f.sla_deadline,
+            suppressed=f.id in suppressed_ids,
+        )
+        responses.append(resp)
+    return responses
 
 
 # ---------------------------------------------------------------------------
@@ -229,6 +307,22 @@ async def create_scan(
             "confidence": f.confidence,
         })
 
+    # 2b. SCA — check dependency manifests for known vulnerabilities
+    sca_findings = scan_diff_for_sca(parsed_diff)
+    for f in sca_findings:
+        all_findings.append({
+            "finding_type": f"sca:{f.osv_id}",
+            "severity": f.severity,
+            "message": f"{f.description}",
+            "file_path": f.file_path,
+            "line_number": f.line_number,
+            "confidence": f.confidence,
+        })
+
+    # Enrich all findings with CWE / CVSS
+    for fd in all_findings:
+        enrich_finding(fd)
+
     # Deduplication
     findings_before_dedup = len(all_findings)
     all_findings = deduplicate_findings(all_findings)
@@ -248,7 +342,14 @@ async def create_scan(
     session.add(scan)
     await session.flush()  # get scan.id
 
+    # Compute SLA deadlines per severity
+    from datetime import timedelta
+    _SLA_HOURS = {"critical": 24, "high": 72, "medium": 168, "low": 720}
+    now = datetime.now(timezone.utc)
     for fd in all_findings:
+        sla_h = _SLA_HOURS.get(fd["severity"], 720)
+        fd["sla_deadline"] = now + timedelta(hours=sla_h)
+        fd["status"] = "new"
         session.add(ScanFinding(scan_id=scan.id, **fd))
 
     # Persist initial timing metrics
@@ -283,7 +384,36 @@ async def create_scan(
         scan.status = "completed"
         await session.commit()
 
-    return scan
+    # 6. Evaluate against repository policy (if one exists)
+    from app.db.models.policy import Policy
+    from app.api.v1.policies import evaluate_findings_against_policy
+    policy_stmt = select(Policy).where(Policy.repository == body.repository)
+    policy = (await session.execute(policy_stmt)).scalar_one_or_none()
+
+    policy_result = None
+    if policy is not None:
+        eval_result = evaluate_findings_against_policy(policy, all_findings)
+        policy_result = PolicyCheckResult(
+            blocked=eval_result.blocked,
+            violations_count=len(eval_result.violations),
+            max_severity_allowed=eval_result.max_severity_allowed,
+        )
+
+    # 7. Build response with suppression annotations
+    finding_responses = await _annotate_findings_suppression(session, scan.findings)
+
+    return ScanResponse(
+        id=scan.id,
+        repository=scan.repository,
+        commit_hash=scan.commit_hash,
+        status=scan.status,
+        risk_score=scan.risk_score,
+        reasoning_level=scan.reasoning_level,
+        synthesis_json=scan.synthesis_json,
+        findings=finding_responses,
+        policy_check=policy_result,
+        created_at=scan.created_at,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -361,7 +491,18 @@ async def get_scan(
             await session.commit()
             await session.refresh(scan, attribute_names=["findings"])
 
-    return scan
+    finding_responses = await _annotate_findings_suppression(session, scan.findings)
+    return ScanResponse(
+        id=scan.id,
+        repository=scan.repository,
+        commit_hash=scan.commit_hash,
+        status=scan.status,
+        risk_score=scan.risk_score,
+        reasoning_level=scan.reasoning_level,
+        synthesis_json=scan.synthesis_json,
+        findings=finding_responses,
+        created_at=scan.created_at,
+    )
 
 
 # ---------------------------------------------------------------------------

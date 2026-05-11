@@ -1,6 +1,7 @@
 import uuid
+from datetime import datetime
 
-from sqlalchemy import String, Integer, Float, ForeignKey, Text
+from sqlalchemy import String, Integer, Float, ForeignKey, Text, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -21,4 +22,18 @@ class ScanFinding(TimestampMixin, Base):
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # --- CWE / CVSS classification ---
+    cwe_id: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    cvss_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    cvss_vector: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
+    # --- Finding lifecycle ---
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="new")
+    assigned_to: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sla_deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     scan = relationship("Scan", back_populates="findings")
+    assignee = relationship("User", foreign_keys=[assigned_to])
