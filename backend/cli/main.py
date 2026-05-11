@@ -8,7 +8,7 @@ import sys
 import click
 import httpx
 
-from cli.token_store import save_token, load_token, clear_token
+from cli.token_store import save_token, load_token, load_refresh_token, clear_token
 
 
 def _detect_repo_name(git_cmd: list[str]) -> str | None:
@@ -78,7 +78,7 @@ def login(ctx: click.Context, username: str, password: str) -> None:
         sys.exit(1)
 
     data = resp.json()
-    token_path = save_token(data["access_token"])
+    token_path = save_token(data["access_token"], data.get("refresh_token"))
     click.secho(f"✔ Logged in as {username}", fg="green", bold=True)
     click.echo(f"  Token saved to {token_path}")
 
@@ -110,7 +110,7 @@ def register(ctx: click.Context, username: str, password: str) -> None:
         sys.exit(1)
 
     data = resp.json()
-    token_path = save_token(data["access_token"])
+    token_path = save_token(data["access_token"], data.get("refresh_token"))
     click.secho(f"✔ Registered and logged in as {username}", fg="green", bold=True)
     click.echo(f"  Token saved to {token_path}")
 
@@ -170,10 +170,12 @@ def scan(ctx: click.Context, repo_name: str | None, wait: bool | None) -> None:
     repo_dir = os.environ.get("SECUREDIFF_REPO_DIR")
     git_cmd = ["git", "-C", repo_dir] if repo_dir else ["git"]
 
-    # Always wait for LLM review unless explicitly disabled — vulnerable code
-    # must not be committed before the AI review completes.
+    # Pre-commit hooks (SECUREDIFF_REPO_DIR set) must return fast so VS Code's
+    # Source Control UI doesn't hang.  Rule-based engines already catch secrets
+    # and PHI immediately; LLM findings appear in the dashboard afterwards.
+    # Manual `icrrg scan` waits for LLM by default.
     if wait is None:
-        wait = True
+        wait = repo_dir is None  # True for manual scan, False for hooks
 
     # Discover the repo root so we can read .icrrg.yml
     root_result = subprocess.run(

@@ -11,7 +11,7 @@ import httpx
 
 from cli.cache import check_cache, write_cache
 from cli.config import BlockingPolicy, load_config
-from cli.token_store import load_token
+from cli.token_store import load_token, load_refresh_token, save_token
 
 # Timeout budget for hook scans (seconds).  Task-02 mandates < 2 s round-trip
 # for the PHI / secret detection path (no LLM).
@@ -74,6 +74,19 @@ def submit_scan(
 
     try:
         resp = httpx.post(url, json=payload, headers=headers, timeout=timeout)
+        # Auto-refresh on 401 (expired access token)
+        if resp.status_code == 401:
+            new_token = _try_refresh_token(api_url)
+            if new_token:
+                headers = {"Authorization": f"Bearer {new_token}"}
+                resp = httpx.post(url, json=payload, headers=headers, timeout=timeout)
+            else:
+                click.secho(
+                    "Session expired. Run `icrrg login` to re-authenticate.",
+                    fg="red",
+                    err=True,
+                )
+                return 1
         resp.raise_for_status()
     except (httpx.ConnectError, httpx.ConnectTimeout, httpx.TimeoutException):
         # Backend not reachable — allow the commit so devs aren't blocked
@@ -168,6 +181,33 @@ def submit_scan(
     )
     write_cache(repo_root, diff_text, clean=True)
     return 0
+
+
+# ── token refresh ────────────────────────────────────────────────────
+
+def _try_refresh_token(api_url: str) -> str | None:
+    """Attempt to refresh the access token using the stored refresh token.
+
+    Returns the new access token on success, None on failure.
+    """
+    refresh = load_refresh_token()
+    if not refresh:
+        return None
+
+    url = f"{api_url}/api/v1/auth/refresh"
+    try:
+        resp = httpx.post(url, json={"refresh_token": refresh}, timeout=10.0)
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        new_access = data.get("access_token")
+        new_refresh = data.get("refresh_token")
+        if new_access:
+            save_token(new_access, new_refresh)
+            return new_access
+    except (httpx.ConnectError, httpx.TimeoutException):
+        pass
+    return None
 
 
 # ── LLM polling ──────────────────────────────────────────────────────
