@@ -158,7 +158,7 @@ from cli.scanner import submit_scan  # noqa: E402
 @click.option(
     "--wait/--no-wait",
     default=None,
-    help="Wait for LLM review to complete before exiting. Default: wait for manual scans, skip for pre-commit hooks.",
+    help="Wait for LLM review to complete before exiting. Default: always wait. Use --no-wait to skip LLM review.",
 )
 @click.pass_context
 def scan(ctx: click.Context, repo_name: str | None, wait: bool | None) -> None:
@@ -170,12 +170,11 @@ def scan(ctx: click.Context, repo_name: str | None, wait: bool | None) -> None:
     repo_dir = os.environ.get("SECUREDIFF_REPO_DIR")
     git_cmd = ["git", "-C", repo_dir] if repo_dir else ["git"]
 
-    # Pre-commit hooks (SECUREDIFF_REPO_DIR set) must return fast so VS Code's
-    # Source Control UI doesn't hang.  Rule-based engines already catch secrets
-    # and PHI immediately; LLM findings appear in the dashboard afterwards.
-    # Manual `icrrg scan` waits for LLM by default.
+    # Both pre-commit hooks and manual scans wait for LLM review by default
+    # so that commits are only allowed after all checks (rule-based + LLM)
+    # complete.  Use --no-wait to skip LLM review if speed is preferred.
     if wait is None:
-        wait = repo_dir is None  # True for manual scan, False for hooks
+        wait = True
 
     # Discover the repo root so we can read .icrrg.yml
     root_result = subprocess.run(
